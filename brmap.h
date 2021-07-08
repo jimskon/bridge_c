@@ -3,26 +3,27 @@
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include<net/ethernet.h>
 using namespace std;
 
 /* A mac address class */
 class MACADDR {
   public:
-    unsigned char mac[6]={0};
+    unsigned char mac[ETH_ALEN]={0};
     MACADDR() {}
-    MACADDR(unsigned char a[6]) {
-      for (int i=0; i<6; i++) {
+    MACADDR(unsigned char a[ETH_ALEN]) {
+      for (int i=0; i<ETH_ALEN; i++) {
         mac[i]=a[i];
       }
     }
     
-    void set(unsigned char a[6]) {
-      for (int i=0; i<6; i++) {
+    void set(unsigned char a[ETH_ALEN]) {
+      for (int i=0; i<ETH_ALEN; i++) {
         mac[i]=a[i];
       }
     }
     bool operator<(const MACADDR a) const {
-      for (int i=0; i<6; i++) {
+      for (int i=0; i<ETH_ALEN; i++) {
         if (a.mac[i] < this->mac[i])
           return false;
         if (a.mac[i] > this->mac[i])
@@ -31,7 +32,7 @@ class MACADDR {
       return false;
     }
     bool operator=(const MACADDR a) const {
-      for (int i=0; i<6; i++) {
+      for (int i=0; i<ETH_ALEN; i++) {
         if (a.mac[i]!=this->mac[i])
           return false;
       }
@@ -39,13 +40,13 @@ class MACADDR {
     }
     void print() const {
       cout << hex;
-      for (int i=0; i<6; i++) {
+      for (int i=0; i<ETH_ALEN; i++) {
         cout << (int) this->mac[i] << ' ';
       }
       cout << dec;
     }
     bool is_broadcast() {
-      for (int i=0; i<6; i++) {
+      for (int i=0; i<ETH_ALEN; i++) {
         if (mac[i]!=0xff) return false;
       }
       return true;
@@ -60,20 +61,20 @@ class MACADDR {
     }
 
     void get_dest_mac(unsigned char *packet)   {
-        for (int i=0; i<6; i++) {
+        for (int i=0; i<ETH_ALEN; i++) {
           mac[i]=packet[i];
         }
     }
 
     void get_src_mac(unsigned char *packet)   {
-        for (int i=0; i<6; i++) {
-          mac[i]=packet[i+6];
+        for (int i=0; i<ETH_ALEN; i++) {
+          mac[i]=packet[i+ETH_ALEN];
         }
     }
 
   void random_mac() {
     int i,tp;
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < ETH_ALEN; i++) {
       mac[i] = rand() % 256;
     }
   }

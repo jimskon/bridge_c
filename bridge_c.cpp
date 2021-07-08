@@ -18,7 +18,7 @@
 
 #include "brmap.h"
 
-#define BUFLEN 4096
+#define BUFLEN 9000
 
 int debug=0;
 /* iface */
@@ -295,8 +295,10 @@ main( int argc, char *argv[] )
 			
 			if ( n > 1518 ) {
 			        fprintf( stderr, "Packet too long: %d\n",n );
+				if ( debug>0 )
+				      pkt_dump( &if1, x, n );
 				continue;
-			}
+				}
 
 			if ( debug>1 )
 			  pkt_dump( &if1, x, n );
@@ -324,6 +326,8 @@ main( int argc, char *argv[] )
 
 			if ( n > 1518 ) {
 			        fprintf( stderr, "Packet too long: %d\n",n );
+				if ( debug>0 )
+				      pkt_dump( &if2, x, n );
 				continue;
 			}
 
