@@ -16,7 +16,7 @@
 
 #include<linux/if_packet.h>
 
-#include "trans_bridge.h"
+#include "brmap.h"
 
 #define BUFLEN 4096
 
@@ -230,7 +230,7 @@ main( int argc, char *argv[] )
 	fd_set rfds;
 	int    maxfd;
 	int    n;
-	trans_bridge bridge;
+	brmap a_brmap;
 	
 	uint8_t *x;
 	
@@ -291,7 +291,7 @@ main( int argc, char *argv[] )
 			if( n == 0 )
 				continue;
 
-			short d = bridge.bridge_packet(1,x);
+			short d = a_brmap.map_pkt(1,x);
 			
 			if ( n > 1518 ) {
 			        fprintf( stderr, "Packet too long: %d\n",n );
@@ -320,7 +320,7 @@ main( int argc, char *argv[] )
 			if( n == 0 )
 				continue;
 
-			short d = bridge.bridge_packet(2,x);
+			short d = a_brmap.map_pkt(2,x);
 
 			if ( n > 1518 ) {
 			        fprintf( stderr, "Packet too long: %d\n",n );
@@ -338,7 +338,7 @@ main( int argc, char *argv[] )
 			        }
 			}
 		        if ( debug > 1 )
-			     bridge.print();
+			     a_brmap.print();
 		}
 	}
 

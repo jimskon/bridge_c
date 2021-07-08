@@ -1,6 +1,6 @@
 
 #include <iostream>
-#include "trans_bridge.h"
+#include "brmap.h"
 
 void printpacket(const char* msg, const unsigned char* p, size_t len) {
     int i;
@@ -21,12 +21,12 @@ int main() {
     unsigned char pkt[128] = {0};
 
     MACADDR a,b;
-    trans_bridge bridge;
+    brmap bridge;
 
-    bridge.bridge_packet(1,pkt1);
-    bridge.bridge_packet(2,pkt2);
-    bridge.bridge_packet(3,pkt3);
-    bridge.bridge_packet(4,pkt4);
+    bridge.map_pkt(1,pkt1);
+    bridge.map_pkt(2,pkt2);
+    bridge.map_pkt(3,pkt3);
+    bridge.map_pkt(4,pkt4);
     for (int i=0;i<20;i++){
       MACADDR a,b;
       a.random_mac();
@@ -40,16 +40,16 @@ int main() {
       short inter=rand()%16;
       printpacket("pkt",pkt,12);
       cout << "Inter:" << inter << endl;
-      cout << "TO:" << bridge.bridge_packet(inter,pkt) << endl;
+      cout << "TO:" << bridge.map_pkt(inter,pkt) << endl;
     }
     printpacket("pkt1",pkt,12);
-    cout << bridge.bridge_packet(3,pkt1) << endl;
+    cout << bridge.map_pkt(3,pkt1) << endl;
     printpacket("pkt2",pkt,12);
-    cout << bridge.bridge_packet(2,pkt2) << endl;
+    cout << bridge.map_pkt(2,pkt2) << endl;
     printpacket("pkt3",pkt,12);
-    cout << bridge.bridge_packet(6,pkt3) << endl;
+    cout << bridge.map_pkt(6,pkt3) << endl;
     printpacket("pkt4",pkt,12);
-    cout << bridge.bridge_packet(2,pkt4) << endl;
+    cout << bridge.map_pkt(2,pkt4) << endl;
 
 
     bridge.print();

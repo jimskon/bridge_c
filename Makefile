@@ -5,20 +5,20 @@ cflags= -O2
 
 all: bridge_c testbr
 
-trans_bridge.o: trans_bridge.cpp trans_bridge.h
-	$(cc) $(cflags) trans_bridge.cpp -c
+brmap.o: brmap.cpp brmap.h
+	$(cc) $(cflags) brmap.cpp -c
 
-bridge_c.o: bridge_c.cpp trans_bridge.h
+bridge_c.o: bridge_c.cpp brmap.h
 	$(cc) $(cflags) bridge_c.cpp -c
 
-bridge_c: trans_bridge.o bridge_c.o
-	$(cc) trans_bridge.o bridge_c.o -o bridge_c
+bridge_c: brmap.o bridge_c.o
+	$(cc) brmap.o bridge_c.o -o bridge_c
 
-testbr.o: testbr.cpp trans_bridge.h
+testbr.o: testbr.cpp brmap.h
 	$(cc) $(cflags) testbr.cpp -c
 
-testbr: testbr.o trans_bridge.o
-	$(cc) testbr.o trans_bridge.o -o testbr
+testbr: testbr.o brmap.o
+	$(cc) testbr.o brmap.o -o testbr
 
 clean:
 	rm -f *.o testbr bridge_c
