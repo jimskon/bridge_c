@@ -27,30 +27,30 @@ int main() {
     bridge.map_pkt(2,pkt2);
     bridge.map_pkt(3,pkt3);
     bridge.map_pkt(4,pkt4);
-    for (int i=0;i<20;i++){
+    for (int i=0;i<1000000;i++){
       MACADDR a,b;
       a.random_mac();
       b.random_mac();
       //a.print();
       //b.print();
-      for (int j=0; j<6;j++) {
+      for (int j=0; j<2;j++) {
 	pkt[j]=a.mac[j];
 	pkt[j+6]=b.mac[j];
       }
       short inter=rand()%16;
-      printpacket("pkt",pkt,12);
-      cout << "Inter:" << inter << endl;
-      cout << "TO:" << bridge.map_pkt(inter,pkt) << endl;
+      bridge.map_pkt(inter,pkt);
+      //printpacket("pkt",pkt,12);
+      //cout << "Inter:" << inter << endl;
+      //cout << "TO:" << bridge.map_pkt(inter,pkt) << endl;
     }
-    printpacket("pkt1",pkt,12);
-    cout << bridge.map_pkt(3,pkt1) << endl;
-    printpacket("pkt2",pkt,12);
-    cout << bridge.map_pkt(2,pkt2) << endl;
-    printpacket("pkt3",pkt,12);
-    cout << bridge.map_pkt(6,pkt3) << endl;
-    printpacket("pkt4",pkt,12);
-    cout << bridge.map_pkt(2,pkt4) << endl;
+    //printpacket("pkt1",pkt,12);
+    //cout << bridge.map_pkt(3,pkt1) << endl;
+    //printpacket("pkt2",pkt,12);
+    //cout << bridge.map_pkt(2,pkt2) << endl;
+    //printpacket("pkt3",pkt,12);
+    //cout << bridge.map_pkt(6,pkt3) << endl;
+    //printpacket("pkt4",pkt,12);
+    //cout << bridge.map_pkt(2,pkt4) << endl;
 
-
-    bridge.print();
+    //bridge.print();
 }

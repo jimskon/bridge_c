@@ -151,7 +151,7 @@ iface_recv( struct iface *ifp, void *x, size_t len )
 	assert( sll.sll_family  == AF_PACKET );
 	assert( sll.sll_ifindex == ifp->if_index );
 
-	if (debug > 0) {
+	if (debug > 1) {
 	        (void)printf( "sll_pkttype:  %d\n", sll.sll_pkttype  );
 		(void)printf( "sll_hatype:   %d\n", sll.sll_hatype );
 	}
@@ -170,7 +170,7 @@ iface_recv( struct iface *ifp, void *x, size_t len )
 	 *                   ^^^^^^^^^^^^
 	 */
 
-	if (debug > 0) {
+	if (debug > 1) {
 	        (void)printf( "sll_protocol: 0x%04x\n", ntohs( sll.sll_protocol ));
 	}
 	return n;
@@ -230,6 +230,7 @@ main( int argc, char *argv[] )
 	fd_set rfds;
 	int    maxfd;
 	int    n;
+	int    len;
 	brmap a_brmap;
 	
 	uint8_t *x;
@@ -294,21 +295,27 @@ main( int argc, char *argv[] )
 			short d = a_brmap.map_pkt(1,x);
 			
 			if ( n > 1518 ) {
-			        fprintf( stderr, "Packet too long: %d\n",n );
-				if ( debug>0 )
+			        if ( debug>1) {
+				      fprintf( stderr, "Packet long: %d\n",n );
 				      pkt_dump( &if1, x, n );
-				continue;
+			        } else {
+				  cout << " D" << n;
 				}
+				  continue;
+			}
 
 			if ( debug>1 )
 			  pkt_dump( &if1, x, n );
 
 			// Send to interface 2 if dest is 2 or broadcast
 			if( d == 2 || d == 0) {
-			        if( iface_send( &if2, x, n ) < 0 ) {
+			  
+			  if( (len = iface_send( &if2, x, n )) < 0 ) {
 			               perror( if2.if_name );
 			               break;
-			        }
+			  }
+			  if ( debug==1 )
+			    cout << "1>2 " << len << "  ";
 			}
 		}
 
@@ -325,9 +332,12 @@ main( int argc, char *argv[] )
 			short d = a_brmap.map_pkt(2,x);
 
 			if ( n > 1518 ) {
-			        fprintf( stderr, "Packet too long: %d\n",n );
-				if ( debug>0 )
+			        if ( debug>1 ) {
+				      fprintf( stderr, "Packet too long: %d\n",n );
 				      pkt_dump( &if2, x, n );
+			        } else {
+				  cout << "D" << n;
+			        }
 				continue;
 			}
 
@@ -336,10 +346,12 @@ main( int argc, char *argv[] )
 
 			// Send to interface 1 if dest is 1 or broadcast
 			if( d == 1 || d == 0) {
-			        if( iface_send( &if1, x, n ) < 0 ) {
+			        if( (len = iface_send( &if1, x, n )) < 0 ) {
 			               perror( if1.if_name );
 			               break;
-			        }
+				}
+				if ( debug==1 )
+				  cout << "2>1 " << len << "  ";
 			}
 		        if ( debug > 1 )
 			     a_brmap.print();
