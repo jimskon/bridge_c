@@ -46,7 +46,7 @@ iface_init( struct iface *ifp, const char *if_name )
 
 	/* store the interface L2 address in if_hwaddr (only used for debugging) */
 
-	(void)strncpy( req.ifr_name, if_name, IFNAMSIZ );
+	(void)strncpy( req.ifr_name, if_name, IFNAMSIZ-1 );
 	if( ioctl( if_sock, SIOCGIFHWADDR, &req ) < 0 ) {
 		perror( if_name );
 		(void)close( if_sock );

@@ -73,7 +73,7 @@ class MACADDR {
     }
 
   void random_mac() {
-    int i,tp;
+    int i;
     for (i = 0; i < ETH_ALEN; i++) {
       mac[i] = rand() % 256;
     }

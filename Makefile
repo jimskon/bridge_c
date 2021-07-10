@@ -1,24 +1,26 @@
 # Make bridge_c
 
-cc= g++
-cflags= -O2
+CXX = g++
+RM  = rm -f
 
-all: bridge_c testbr
+PROGRAMS = testbr bridge_c
+CXXFLAGS = -Wall -Wextra -std=c++11 -O2
 
-brmap.o: brmap.cpp brmap.h
-	$(cc) $(cflags) brmap.cpp -c
 
-bridge_c.o: bridge_c.cpp brmap.h
-	$(cc) $(cflags) bridge_c.cpp -c
+all: $(PROGRAMS)
 
-bridge_c: brmap.o bridge_c.o
-	$(cc) brmap.o bridge_c.o -o bridge_c
-
-testbr.o: testbr.cpp brmap.h
-	$(cc) $(cflags) testbr.cpp -c
+bridge_c: bridge_c.o brmap.o
+	$(CXX) -o $@ $^
 
 testbr: testbr.o brmap.o
-	$(cc) testbr.o brmap.o -o testbr
+	$(CXX) -o $@ $^
 
 clean:
-	rm -f *.o testbr bridge_c
+	$(RM) *.o $(PROGRAMS)
+
+.PHONY: clean
+
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -I. -o $@ -c $<
+

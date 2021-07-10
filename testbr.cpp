@@ -3,7 +3,7 @@
 #include "brmap.h"
 
 void printpacket(const char* msg, const unsigned char* p, size_t len) {
-    int i;
+    size_t i;
     cout << msg << " len=" << len << endl;
     for(i=0; i<len; ++i) {
       cout << std::hex << (int) p[i];

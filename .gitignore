@@ -1,0 +1,4 @@
+bridge_c
+testbr
+*.o
+*.swp
