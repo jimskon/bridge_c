@@ -3,7 +3,10 @@
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include<net/ethernet.h>
+#include <net/ethernet.h>
+
+#include "logger.h"
+
 using namespace std;
 
 /* A mac address class */
@@ -107,11 +110,12 @@ class brmap {
 
  private:
     map<MACADDR,Bridge_entry> bridge;
+    logger& _log;
 
  public:
-    
-    brmap(); // Constructor
-  
+
+    brmap( logger& log ); // Constructor
+
     void print();
 
     int map_pkt(int pkt_src, unsigned char *packet);

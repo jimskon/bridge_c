@@ -9,10 +9,9 @@
 using namespace std;
 
 
+brmap::brmap( logger& log ) : _log( log )
+{ ; }
 
-  
-brmap::brmap() {}
-  
 void brmap::print() {
     map<MACADDR,Bridge_entry>::iterator it = bridge.begin();
     cout << "Bridge table (" << bridge.size() << ")\n";
@@ -24,7 +23,7 @@ void brmap::print() {
   }
 
   /* Transparent learning bridge map
-     pkt_src    - source interface 
+     pkt_src    - source interface
      packet     - The packet to bridge
      returns:   0: broadcast
      1-n - dest interface
@@ -39,11 +38,11 @@ int brmap::map_pkt(int pkt_src, unsigned char *packet) {
     src_mac.get_src_mac(packet);
     dest_mac.get_dest_mac(packet);
 
-    /*  Process the source address.  Add if not in bridge. 
-	Update bridge if interface is different 
+    /*  Process the source address.  Add if not in bridge.
+	Update bridge if interface is different
 	drop if broadcast from this interface */
     if (bridge.find(src_mac) != bridge.end()) {
-      // check if changed 
+      // check if changed
       Bridge_entry b = bridge.find(src_mac)->second;
 
       int src_i = b.src_interface;
@@ -52,11 +51,11 @@ int brmap::map_pkt(int pkt_src, unsigned char *packet) {
 	b.src_interface=pkt_src;
 	bridge[src_mac]=b;
       }
-    } else { 
+    } else {
       Bridge_entry new_entry(pkt_src);
       bridge.emplace(src_mac,new_entry);
     }
-    
+
     if (dest_mac.is_multicast() || dest_mac.is_broadcast()) {
       dest_i = 0;
     } else {
