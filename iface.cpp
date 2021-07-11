@@ -8,6 +8,7 @@
 
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <net/ethernet.h>
 #include <linux/if_packet.h>
 
 #include "brmap.h"
@@ -17,19 +18,19 @@
 //  S T R U C T O R S  //
 //  - - - - - - - - -  //
 
-iface::iface( logger& log ) : if_log( log )
+iface::iface( logger& log ) : _log( log )
 {
-	(void)::memset( if_hwaddr, 0, sizeof( if_hwaddr ));
-	if_name  = "(null)";
-	if_index =  0;
-	if_sock  = -1;
-	if_mtu   =  0;
+	(void)::memset( _hwaddr, 0, sizeof( _hwaddr ));
+	_name  = "(null)";
+	_index =  0;
+	_sock  = -1;
+	_mtu   =  0;
 }
 
 iface::~iface()
 {
 	(void)promisc( false );
-	(void)::close( if_sock );
+	(void)::close( _sock );
 }
 
 //  - - - - - - -  //
@@ -42,57 +43,57 @@ iface::bind( const char *name )
 	struct sockaddr_ll sll;
 	struct ifreq req;
 
-	if_name = name;
+	_name = name;
 
-	if_sock = ::socket( AF_PACKET, SOCK_RAW, ::htons( ETH_P_ALL ));
-	if( if_sock < 0 ) {
-		::perror( if_name );
+	_sock = ::socket( AF_PACKET, SOCK_RAW, ::htons( ETH_P_ALL ));
+	if( _sock < 0 ) {
+		::perror( _name );
 		return -1;
 	}
 
-	/* store the interface L2 address in if_hwaddr (only used for debugging) */
+	/* store the interface L2 address in _hwaddr (only used for debugging) */
 
-	(void)::strncpy( req.ifr_name, if_name, IFNAMSIZ-1 );
-	if( ::ioctl( if_sock, SIOCGIFHWADDR, &req ) < 0 ) {
-		::perror( if_name );
-		(void)::close( if_sock );
+	(void)::strncpy( req.ifr_name, _name, IFNAMSIZ-1 );
+	if( ::ioctl( _sock, SIOCGIFHWADDR, &req ) < 0 ) {
+		::perror( _name );
+		(void)::close( _sock );
 		return -1;
 	}
 
-	(void)::memcpy( if_hwaddr, req.ifr_hwaddr.sa_data, ETH_ALEN );
+	(void)::memcpy( _hwaddr, req.ifr_hwaddr.sa_data, ETH_ALEN );
 
-	/* store the interface index in if_index */
+	/* store the interface index in _index */
 
-	if( ::ioctl( if_sock, SIOCGIFINDEX, &req ) < 0 ) {
-		::perror( if_name );
-		(void)::close( if_sock );
+	if( ::ioctl( _sock, SIOCGIFINDEX, &req ) < 0 ) {
+		::perror( _name );
+		(void)::close( _sock );
 		return -1;
 	}
 
-	if_index = req.ifr_ifindex;
+	_index = req.ifr_ifindex;
 
-	/* store the interface MTU in if_mtu */
+	/* store the interface MTU in _mtu */
 
-	if( ::ioctl( if_sock, SIOCGIFMTU, &req ) < 0 ) {
-		::perror( if_name );
-		(void)::close( if_sock );
+	if( ::ioctl( _sock, SIOCGIFMTU, &req ) < 0 ) {
+		::perror( _name );
+		(void)::close( _sock );
 		return -1;
 	}
 
-	if_mtu = req.ifr_mtu;
+	_mtu = req.ifr_mtu;
 
 	/*
 	 * populate a sockaddr_ll instance and bind the interface to it
-	 * (might set sll_protocol here as well -- see note in iface_recv())
+	 * (might set sll_protocol here as well -- see note in iface::recv())
 	 */
 
 	(void)::memset( &sll, 0, sizeof( sll ));
 	sll.sll_family  = AF_PACKET; /* only interested in packets from the AF_PACKET family */
-	sll.sll_ifindex = if_index;  /* only interested in packets captured from this interface */
+	sll.sll_ifindex = _index;    /* only interested in packets captured from this interface */
 
-	if( ::bind( if_sock, (const struct sockaddr*)&sll, sizeof( sll )) < 0 ) {
-		::perror( if_name );
-		(void)::close( if_sock );
+	if( ::bind( _sock, (const struct sockaddr*)&sll, sizeof( sll )) < 0 ) {
+		::perror( _name );
+		(void)::close( _sock );
 		return -1;
 	}
 
@@ -106,13 +107,13 @@ iface::promisc( bool enable )
 	int    op;
 
 	(void)::memset( &mr, 0, sizeof( mr ));
-	mr.mr_ifindex = if_index;
+	mr.mr_ifindex = _index;
 	mr.mr_type    = PACKET_MR_PROMISC;
 
 	op = enable ? PACKET_ADD_MEMBERSHIP : PACKET_DROP_MEMBERSHIP;
 
 	return
-		::setsockopt( if_sock, SOL_PACKET, op, &mr, sizeof( mr ));
+		::setsockopt( _sock, SOL_PACKET, op, &mr, sizeof( mr ));
 }
 
 /*
@@ -120,32 +121,43 @@ void
 iface::cleanup()
 {
 	(void)promisc( false );
-	(void)::close( ifp->if_sock );
+	(void)::close( ifp->_sock );
 }
 */
 
-void
-iface::dump()
+std::ostream& operator<< ( std::ostream& os, const iface& obj )
 {
-	uint8_t *x = if_hwaddr;
-	(void)::printf( "%s: ",      if_name );
-	(void)::printf( "index: %d", if_index );
-	(void)::printf( ", hwaddr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+	char straddr[12+5+1];
+
+	const uint8_t *x = obj._hwaddr;
+	(void)::snprintf( straddr, sizeof( straddr ),
+		"%02x:%02x:%02x:%02x:%02x:%02x",
 		x[0], x[1], x[2], x[3], x[4], x[5] );
+
+	os << obj._name << ": "
+	   << "index: "    << obj._index
+	   << ", mtu: "    << obj._mtu
+	   << ", hwaddr: " << straddr
+	;
+
+	return os;
 }
 
 int
-iface::recv( void *x, size_t len )
+iface::recv( struct packet& pkt )
 {
-	struct sockaddr_ll sll;
 	socklen_t fromlen;
 	int n;
 
-	fromlen = sizeof( struct sockaddr_ll );
-	n = ::recvfrom( if_sock, x, len, 0, (struct sockaddr*)&sll, &fromlen );
+	struct sockaddr_ll& sll = pkt._sll;
+
+	fromlen = sizeof( sll );
+	n = ::recvfrom( _sock, pkt._x, pkt._cap, 0, (struct sockaddr*)&sll, &fromlen );
 
 	if( n < 0 )
 		return n;
+
+	pkt._len = n;
 
 	/* ignore packets involving our host -- see PACKET(7) */
 
@@ -161,10 +173,10 @@ iface::recv( void *x, size_t len )
 	/* something's wrong with the interface setup if any of these fail */
 
 	assert( sll.sll_family  == AF_PACKET );
-	assert( sll.sll_ifindex == if_index );
+	assert( sll.sll_ifindex == _index );
 
-	if_log << "sll_pkttype:  " << sll.sll_pkttype;
-	if_log << "sll_hatype:   " << sll.sll_hatype;
+	_log << "sll_pkttype:  " << (int)sll.sll_pkttype << std::endl;
+	_log << "sll_hatype:   " <<      sll.sll_hatype  << std::endl;
 
 	/*
 	 * sll_protocol is in network byte order
@@ -181,16 +193,17 @@ iface::recv( void *x, size_t len )
 	 *                   ^^^^^^^^^^^^
 	 */
 
-	if_log << "sll_protocol: " << ::ntohs( sll.sll_protocol );
+	_log << "sll_protocol: " << ::ntohs( sll.sll_protocol ) << std::endl;
 
 	return n;
 }
 
 int
-iface::send( const void *x, size_t len )
+iface::send( struct packet& pkt )
 {
-	struct sockaddr_ll sll;
 	struct ethhdr *eh;
+
+	struct sockaddr_ll& sll = pkt._sll;
 
 	/*
 	 * Quoting PACKET(7):
@@ -198,17 +211,17 @@ iface::send( const void *x, size_t len )
 	 *  sll_halen, sll_ifindex, and sll_protocol. The other fields should be 0."
 	 */
 
-	eh = (struct ethhdr*)x;
+	eh = (struct ethhdr*)pkt._x;
 
 	(void)::memset( &sll, 0, sizeof( sll ));
 	(void)::memcpy( sll.sll_addr, eh->h_source, ETH_ALEN );
 	sll.sll_halen    = ETH_ALEN;
 	sll.sll_family   = AF_PACKET;
-	sll.sll_ifindex  = if_index;
+	sll.sll_ifindex  = _index;
 	sll.sll_protocol = eh->h_proto;
 
 	return
-		::sendto( if_sock, x, len, 0, (struct sockaddr*)&sll, sizeof( sll ));
+		::sendto( _sock, pkt._x, pkt._len, 0, (struct sockaddr*)&sll, sizeof( sll ));
 }
 
 /*EoF*/

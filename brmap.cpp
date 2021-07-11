@@ -14,11 +14,11 @@ brmap::brmap( logger& log ) : _log( log )
 
 void brmap::print() {
     map<MACADDR,Bridge_entry>::iterator it = bridge.begin();
-    cout << "Bridge table (" << bridge.size() << ")\n";
+    _log << "Bridge table (" << bridge.size() << ")\n";
     for(; it != bridge.end(); it++)
       {
 	it->first.print();
-	cout << " :: " << it->second.src_interface << endl;
+	_log << " :: " << it->second.src_interface << endl;
       }
   }
 

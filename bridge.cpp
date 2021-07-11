@@ -7,6 +7,8 @@
 
 #include "brmap.h"
 #include "iface.h"
+#include "packet.h"
+#include "icmp4.h"
 #include "logger.h"
 
 #define BUFLEN 9000
@@ -18,6 +20,7 @@ main( int argc, char *argv[] )
 	iface if1( log ), if2( log );
 	struct timeval tv;
 	fd_set rfds;
+	int    fd1, fd2;
 	int    maxfd;
 	int    n;
 	int    len;
@@ -27,8 +30,9 @@ main( int argc, char *argv[] )
 	uint8_t *x;
 
 	if( argc != 3 ) {
-		(void)fprintf( stderr, "usage: %s if1 if2\n", argv[0] );
-		(void)fprintf( stderr, "DEBUG=1 or 2 for debug output\n" );
+		std::cerr << "usage: " << argv[0] << " if1 if2" << std::endl
+		          << "DEBUG=1 or 2 for debug output"    << std::endl
+		;
 		exit(1);
 	}
 
@@ -44,20 +48,22 @@ main( int argc, char *argv[] )
 	assert( if1.promisc( true ) == 0 );
 	assert( if2.promisc( true ) == 0 );
 
-	if ( debug > 0 ) {
-		if1.dump();
-		if2.dump();
-	}
+	log(0) << if1 << std::endl;
+	log(0) << if2 << std::endl;
 
 	x = (uint8_t *) malloc( BUFLEN );
 	assert( x != NULL );
 
-	maxfd = ( if1.if_sock > if2.if_sock ) ? if1.if_sock : if2.if_sock;
+	fd1 = if1.socket();
+	fd2 = if2.socket();
+	maxfd = ( fd1 > fd2 ) ? fd1 : fd2;
+
+	packet pkt( BUFLEN );
 
 	for( ;; ) {
 		FD_ZERO( &rfds );
-		FD_SET( if1.if_sock, &rfds );
-		FD_SET( if2.if_sock, &rfds );
+		FD_SET( fd1, &rfds );
+		FD_SET( fd2, &rfds );
 
 		tv.tv_sec  = 1;
 		tv.tv_usec = 0;
@@ -74,71 +80,78 @@ main( int argc, char *argv[] )
 			 * this would be a nice place to delete expired BNG entries though
 			 * (no need for timers/threads/locks since it'a all sequential).
 			 */
-			log(0) << "waiting...";
+			log(0) << "waiting..." << std::endl;
 			continue;
 		}
 
-		if( FD_ISSET( if1.if_sock, &rfds )) {
-			n = if1.recv( x, BUFLEN );
+		if( FD_ISSET( fd1, &rfds )) {
+			n = if1.recv( pkt );
 
 	                if( n < 0 ) {
-				perror( if1.if_name );
+				perror( if1.name() );
 				break;
 			}
 
 			if( n == 0 )
 				continue;
 
-			short d = a_brmap.map_pkt(1,x);
+			//short d = a_brmap.map_pkt(1,x);
+			short d = 0;
 
-			if ( n > 1518 ) {
-				log(1) << "Packet too long: " << n;
-				log(1).hexdump( x, n );
+			if ( n > if2.mtu() ) {
+				log(1) << "Packet too long: " << n << std::endl;
+				log(1) << pkt;
+				log(1) << "Sending ICMP fragmentation needed" << std::endl;
+				n = icmp4_gen_needfrag( x+128, BUFLEN-128, x, if2.mtu() );
+				//(void)if1.send( x+128, n, sll );
 				continue;
 			}
 
-			// XXX improve packet logging
-			log(1).hexdump( x, n );
+			log(1) << ' ' << pkt;
 
 			// Send to interface 2 if dest is 2 or broadcast
 			if( d == 2 || d == 0) {
 
-			  if( (len = if2.send( x, n )) < 0 ) {
-			               perror( if2.if_name );
+			  if( (len = if2.send( pkt )) < 0 ) {
+			               perror( if2.name() );
 			               break;
 			  }
-			    log << "1>2 " << len << "  ";
+			    log << "1>2 " << len << "  " << std::endl;
 			}
 		}
 
-		if( FD_ISSET( if2.if_sock, &rfds )) {
-			n = if2.recv( x, BUFLEN );
+		if( FD_ISSET( fd2, &rfds )) {
+			n = if2.recv( pkt );
+
 			if( n < 0 ) {
-				perror( if2.if_name );
+				perror( if2.name() );
 				break;
 			}
 
 			if( n == 0 )
 				continue;
 
-			short d = a_brmap.map_pkt(2,x);
+			//short d = a_brmap.map_pkt(2,x);
+			short d = 0;
 
-			if ( n > 1518 ) {
-				log(1) << "Packet too long: " << n;
-				log(1).hexdump( x, n );
+			if ( n > if1.mtu() ) {
+				log(1) << "Packet too long: " << n << std::endl;
+				log(1) << pkt;
+				log(1) << "Sending ICMP fragmentation needed" << std::endl;
+				n = icmp4_gen_needfrag( x+128, BUFLEN-128, x, if1.mtu() );
+				//(void)if1.send( x+128, n, sll );
 				continue;
 			}
 
-			// XXX improve packet logging
-			log(1).hexdump( x, n );
+			log(1) << ' ' << pkt;
 
 			// Send to interface 1 if dest is 1 or broadcast
 			if( d == 1 || d == 0) {
-			        if( (len = if1.send( x, n )) < 0 ) {
-			               perror( if1.if_name );
+			        if( (len = if1.send( pkt )) < 0 ) {
+			               perror( if1.name() );
 			               break;
 				}
-				log << "2>1 " << len << "  ";
+				log << "2>1 " << len << "  " << std::endl;
 			}
 		        if ( debug > 1 )
 			     a_brmap.print();
@@ -146,9 +159,6 @@ main( int argc, char *argv[] )
 	}
 
 	free( x );
-
-	//iface_cleanup( &if2 );
-	//iface_cleanup( &if1 );
 
 	return 0;
 }

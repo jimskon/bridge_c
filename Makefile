@@ -5,19 +5,20 @@ PROGRAMS = bridge testbr
 SRCFILES = $(wildcard *.cpp)
 OBJFILES = $(patsubst %.cpp,%.o,$(SRCFILES))
 
-CXX      = g++
+CXX     := g++
 CPPFLAGS = -I.
 CXXFLAGS = -Wall -Wextra -std=c++11 -O2 $(CPPFLAGS)
-CHECK    = cppcheck -q --enable=warning $(CPPFLAGS)
+CHECK    = cppcheck -q --enable=style,warning $(CPPFLAGS)
+CTAGS    = ctags -a
 RM       = rm -f
 
 
 all: $(PROGRAMS)
 
-bridge: bridge.o brmap.o iface.o logger.o
+bridge: bridge.o brmap.o iface.o packet.o packet_eth.o icmp4.o macaddr.o
 	$(CXX) -o $@ $^
 
-testbr: testbr.o brmap.o logger.o
+testbr: testbr.o brmap.o
 	$(CXX) -o $@ $^
 
 clean:
@@ -26,7 +27,10 @@ clean:
 check:
 	$(CHECK) $(SRCFILES)
 
-.PHONY: all clean check
+tags:
+	find /usr/include -type f -name "*.h" | xargs $(CTAGS)
+
+.PHONY: all clean check tags
 
 
 %.o: %.cpp

@@ -19,7 +19,7 @@ class MACADDR {
         mac[i]=a[i];
       }
     }
-    
+
     void set(unsigned char a[ETH_ALEN]) {
       for (int i=0; i<ETH_ALEN; i++) {
         mac[i]=a[i];

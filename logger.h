@@ -5,33 +5,50 @@
 #include <iostream>
 #include <cstdint>
 
-class logger
+class logger : public std::ostream
 {
 	private:
 
-		int _level;
-		int _user;
+		struct NullBuffer : public std::streambuf
+		{ int overflow( int c ) { return c; } };
+
+		class NullStream : public std::ostream
+		{
+			private:
+				NullBuffer _null;
+
+			public:
+				NullStream() : std::ostream( &_null )
+				{ ; }
+
+				virtual ~NullStream()
+				{ ; }
+		};
+
+		NullStream _null;
+		std::ostream* _os;
+		int        _level;
 
 	public:
 
-		logger();
-		virtual ~logger();
+		logger() : _os( &std::clog ), _level(0)
+		{ ; }
 
-		void hexdump( const uint8_t *x, size_t len );
+		virtual ~logger()
+		{ ; }
 
 		void level( int level )
 		{ _level = level; }
 
 		logger& operator() ( int user ) {
-			_user = user;
+			_os = ( user <= _level ) ? &std::clog : &_null;
 			return *this;
 		}
 
 		template<class T>
-		logger& operator<< ( const T &obj ) {
-			if( _user >= _level )
-				std::cerr << obj << std::endl;
-			return *this;
+		std::ostream& operator<< ( const T &obj ) {
+			*_os << obj;
+			return *_os;
 		}
 };
 
