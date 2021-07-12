@@ -25,7 +25,6 @@ main( int argc, char *argv[] )
 	int    n;
 	int    len;
 	int    debug;
-	size_t off;
 	brmap  a_brmap( log );
 
 	uint8_t *x;
@@ -49,8 +48,8 @@ main( int argc, char *argv[] )
 	assert( if1.promisc( true ) == 0 );
 	assert( if2.promisc( true ) == 0 );
 
-	log(0) << if1 << std::endl;
-	log(0) << if2 << std::endl;
+	log(1) << if1 << std::endl;
+	log(1) << if2 << std::endl;
 
 	x = (uint8_t *) malloc( BUFLEN );
 	assert( x != NULL );

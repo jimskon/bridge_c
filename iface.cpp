@@ -125,24 +125,6 @@ iface::cleanup()
 }
 */
 
-std::ostream& operator<< ( std::ostream& os, const iface& obj )
-{
-	char straddr[12+5+1];
-
-	const uint8_t *x = obj._hwaddr;
-	(void)::snprintf( straddr, sizeof( straddr ),
-		"%02x:%02x:%02x:%02x:%02x:%02x",
-		x[0], x[1], x[2], x[3], x[4], x[5] );
-
-	os << obj._name << ": "
-	   << "index: "    << obj._index
-	   << ", mtu: "    << obj._mtu
-	   << ", hwaddr: " << straddr
-	;
-
-	return os;
-}
-
 int
 iface::recv( struct pdu& pkt )
 {
@@ -202,6 +184,28 @@ iface::send( struct pdu& pkt )
 
 	return
 		::sendto( _sock, pkt._x, pkt._len, 0, (struct sockaddr*)&sll, sizeof( sll ));
+}
+
+//  - - - - - -  //
+//  S T A T I C  //
+//  - - - - - -  //
+
+std::ostream& operator<< ( std::ostream& os, const iface& obj )
+{
+	char straddr[12+5+1];
+
+	const uint8_t *x = obj._hwaddr;
+	(void)::snprintf( straddr, sizeof( straddr ),
+		"%02x:%02x:%02x:%02x:%02x:%02x",
+		x[0], x[1], x[2], x[3], x[4], x[5] );
+
+	os << obj._name << ": "
+	   << "index: "    << obj._index
+	   << ", mtu: "    << obj._mtu
+	   << ", hwaddr: " << straddr
+	;
+
+	return os;
 }
 
 /*EoF*/

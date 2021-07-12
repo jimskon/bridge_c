@@ -13,10 +13,6 @@ struct pdu_eth final : public pdu
 		: pdu( other._x + off, other._len - off )
 	{ ; }
 
-	pdu_eth( const pdu_eth& other )
-		: pdu( other._x, other._len )
-	{ ; }
-
 	virtual ~pdu_eth()
 	{ ; }
 

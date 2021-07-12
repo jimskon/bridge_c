@@ -1,5 +1,6 @@
 
 #include <netinet/ip.h>
+#include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
@@ -21,6 +22,37 @@ ipv4_proto_str( unsigned proto )
 
 	return "";
 }
+
+static uint16_t
+in_cksum( const void *addr, int len, unsigned sum = 0 )
+{
+	const uint16_t *w = (const uint16_t*)addr;
+
+	while( len > 1 ) {
+		sum += *w++;
+		len -= 2;
+	}
+
+	if( len == 1 ) {
+		uint16_t odd = 0;
+		*(uint8_t*)(&odd) = *(const uint8_t*)w ;
+		sum += odd;
+	}
+
+	sum  = (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);
+
+	return( ~sum );
+}
+
+struct pseudohdr
+{
+	uint32_t saddr;
+	uint32_t daddr;
+	uint8_t  zero;
+	uint8_t  proto;
+	uint16_t len;
+};
 
 //  - - - - - -  //
 //  P U B L I C  //
@@ -50,7 +82,32 @@ pdu_ipv4::filter( std::ostream& log )
 		case IPPROTO_TCP:
 		{
 			pdu_tcp tcp( *this, off );
-			return tcp.filter( log );
+			if( tcp.filter( log )) {
+				/*
+				 * pdu_tcp was modified, we need to recompute checksums.
+				 * First, do TCP:
+				 */
+				struct tcphdr   *th = (struct tcphdr*)tcp._x;
+				struct pseudohdr ph = {
+					ih->saddr,
+					ih->daddr,
+					0,
+					ih->protocol,
+					htons( (uint16_t)((_len-off) & 0xffff))
+				};
+				const uint16_t *w = (const uint16_t*)&ph;
+				unsigned sum = 0;
+				for( int i = 0; i < 6; i++ )
+					sum += w[i];
+				th->th_sum = 0;
+				th->th_sum = in_cksum( _x+off, _len-off, sum );
+				/*
+				 * Then do IP:
+				 */
+				ih->check = 0;
+				ih->check = in_cksum( _x, off );
+(void)fprintf( stderr, "*** CHECKSUMS: TCP: %04x, IP: %04x\n", ntohs( th->th_sum ), ntohs( ih->check ));
+			}
 		}
 
 		case IPPROTO_UDP:

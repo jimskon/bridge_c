@@ -1,4 +1,7 @@
 
+#include <iostream>
+#include <cstring>
+
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -44,7 +47,62 @@ pdu_tcp::filter( std::ostream& log )
 
 	log << '>' << std::endl;
 
-	return 1;
+	if(( th->th_flags & TH_SYN ) == 0 )
+		return 0; /* not a SYN ? don't bother */
+
+	if( off == 20 )
+		return 0; /* no TCP options ? don't bother */
+
+	return
+		adjust_mss( _x + 20, off - 20 );
+}
+
+int
+pdu_tcp::adjust_mss( uint8_t *x, size_t len )
+{
+	size_t   olen;
+	uint16_t mss;
+	unsigned opt;
+
+	int      mod = 0;
+	uint8_t *end = x + len;
+
+	while( x < end ) {
+		opt = x[0];
+
+		if( opt == TCPOPT_EOL ) {
+			break;
+		}
+
+		if( opt == TCPOPT_NOP ) {
+			x++; continue;
+		}
+
+		olen = x[1];
+		if(( x + olen ) > end ) {
+			// malformed TCP segment
+			break;
+		}
+
+		if( opt == TCPOPT_MAXSEG ) {
+			if( olen != TCPOLEN_MAXSEG ) {
+				// shouldn't happen
+				break;
+			}
+
+			(void)::memcpy( &mss, x+2, sizeof( mss ));
+			// adjust to 1400 for now
+			if( ntohs( mss ) > 1400 ) {
+				mss = htons( 1400 );
+				(void)::memcpy( x+2, &mss, sizeof( mss ));
+				mod = 1;
+			}
+		}
+
+		x += olen;
+	}
+
+	return mod;
 }
 
 /*EoF*/
