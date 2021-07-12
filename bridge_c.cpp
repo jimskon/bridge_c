@@ -16,6 +16,8 @@
 
 #include<linux/if_packet.h>
 
+#include <pthread.h>
+
 #include "brmap.h"
 
 #define BUFLEN 9000
@@ -29,6 +31,16 @@ struct iface {
 	int         if_index;
 	int         if_sock;
 };
+
+/* iface pair for thread */
+struct iface_pair {
+  struct iface *if1;
+  struct iface *if2;
+};
+  
+/* Gloabal Bridge map */
+brmap a_brmap;
+
 
 static int
 iface_init( struct iface *ifp, const char *if_name )
@@ -220,18 +232,67 @@ pkt_dump( struct iface *ifp, const uint8_t *x, int n )
 		(void)printf( "\n" );
 }
 
+
+void *copy_if(void *ipv) {
+    int n;
+    uint8_t *x;
+    int len;
+
+    struct iface_pair *ip = (struct iface_pair *) ipv;
+    x = (uint8_t *) malloc( BUFLEN );
+    assert( x != NULL );
+
+    for (;;) {
+        n = iface_recv( ip->if1, x, BUFLEN );
+	//cout << "R:" << ip->if1->if_name << ":" << n << flush;
+	if( n < 0 ) {
+	  perror( ip->if1->if_name );
+	  break;
+	}
+
+	if( n == 0 )
+	  continue;
+	
+	short d = a_brmap.map_pkt(1,x);
+	/*
+	if ( n > 1518 ) {
+	  if ( debug>1) {
+	    fprintf( stderr, "Packet long: %d\n",n );
+	    pkt_dump( ip->if1, x, n );
+	  } else {
+	    cout << " D" << n;
+	  }
+	  continue;
+	}
+	*/
+	if ( debug>1 )
+	  pkt_dump( ip->if1, x, n );
+
+	if( (len = iface_send( ip->if2, x, n )) < 0 ) {
+	  perror( ip->if2->if_name );
+	  break;
+	}
+	if ( debug==1 )
+	  cout << "1>2 " << len << "  ";
+	}
+}
+
+
 /* main */
+
+
 
 int
 main( int argc, char *argv[] )
 {
 	struct iface if1, if2;
+	struct iface_pair *ip1,*ip2;
 	struct timeval tv;
+	pthread_t t1, t2;
 	fd_set rfds;
 	int    maxfd;
 	int    n;
 	int    len;
-	brmap a_brmap;
 	
 	uint8_t *x;
 	
@@ -251,115 +312,17 @@ main( int argc, char *argv[] )
 	     iface_dump( &if2 );
 	}
 
-	x = (uint8_t *) malloc( BUFLEN );
-	assert( x != NULL );
+	ip1=(struct iface_pair*)malloc(sizeof(struct iface_pair));
+	ip2=(struct iface_pair*)malloc(sizeof(struct iface_pair));
 
-	maxfd = ( if1.if_sock > if2.if_sock ) ? if1.if_sock : if2.if_sock;
+	ip1->if1 = &if1;
+	ip1->if2 = &if2;
+	ip2->if1 = &if2;
+	ip2->if2 = &if1;
+	pthread_create(&t1,NULL,copy_if,(void*)ip1);
+	pthread_create(&t2,NULL,copy_if,(void*)ip2);
 
-	for( ;; ) {
-		FD_ZERO( &rfds );
-		FD_SET( if1.if_sock, &rfds );
-		FD_SET( if2.if_sock, &rfds );
-
-		tv.tv_sec  = 1;
-		tv.tv_usec = 0;
-
-		n = select( maxfd+1, &rfds, NULL, NULL, &tv );
-		if( n < 0 ) {
-			perror( "select()" );
-			break;
-		}
-
-		if( n == 0 ) {
-			/*
-			 * timeout on select() -- for now, just signal that we're still alive.
-			 * this would be a nice place to delete expired BNG entries though
-			 * (no need for timers/threads/locks since it'a all sequential).
-			 */
-		        if ( debug > 0 )
-			      (void)fprintf( stderr, "waiting...\n" );
-			continue;
-		}
-
-		if( FD_ISSET( if1.if_sock, &rfds )) {
-			n = iface_recv( &if1, x, BUFLEN );
-
-	                if( n < 0 ) {
-				perror( if1.if_name );
-				break;
-			}
-
-			if( n == 0 )
-				continue;
-
-			short d = a_brmap.map_pkt(1,x);
-			
-			if ( n > 1518 ) {
-			        if ( debug>1) {
-				      fprintf( stderr, "Packet long: %d\n",n );
-				      pkt_dump( &if1, x, n );
-			        } else {
-				  cout << " D" << n;
-				}
-				  continue;
-			}
-
-			if ( debug>1 )
-			  pkt_dump( &if1, x, n );
-
-			// Send to interface 2 if dest is 2 or broadcast
-			if( d == 2 || d == 0) {
-			  
-			  if( (len = iface_send( &if2, x, n )) < 0 ) {
-			               perror( if2.if_name );
-			               break;
-			  }
-			  if ( debug==1 )
-			    cout << "1>2 " << len << "  ";
-			}
-		}
-
-		if( FD_ISSET( if2.if_sock, &rfds )) {
-			n = iface_recv( &if2, x, BUFLEN );
-			if( n < 0 ) {
-				perror( if2.if_name );
-				break;
-			}
-
-			if( n == 0 )
-				continue;
-
-			short d = a_brmap.map_pkt(2,x);
-
-			if ( n > 1518 ) {
-			        if ( debug>1 ) {
-				      fprintf( stderr, "Packet too long: %d\n",n );
-				      pkt_dump( &if2, x, n );
-			        } else {
-				  cout << "D" << n;
-			        }
-				continue;
-			}
-
-			if ( debug>1 )
-			      pkt_dump( &if2, x, n );
-
-			// Send to interface 1 if dest is 1 or broadcast
-			if( d == 1 || d == 0) {
-			        if( (len = iface_send( &if1, x, n )) < 0 ) {
-			               perror( if1.if_name );
-			               break;
-				}
-				if ( debug==1 )
-				  cout << "2>1 " << len << "  ";
-			}
-		        if ( debug > 1 )
-			     a_brmap.print();
-		}
-	}
-
-	free( x );
-
+	pthread_exit(NULL);
 	iface_cleanup( &if2 );
 	iface_cleanup( &if1 );
 
