@@ -5,13 +5,12 @@
 #include <ostream>
 
 #include "logger.h"
-#include "packet.h"
+#include "pdu/pdu.h"
 
 class iface
 {
 	private:
 
-		logger&     _log;
 		const char *_name;
 		uint8_t     _hwaddr[ETH_ALEN];
 		int         _index;
@@ -20,19 +19,14 @@ class iface
 
 	public:
 
-		iface( logger& log );
+		iface();
 		virtual ~iface();
 
 		int bind    ( const char *name );
 		int promisc ( bool enable );
 
-/*
-		int recv    (       void *x, size_t len, struct sockaddr_ll& sll );
-		int send    ( const void *x, size_t len, struct sockaddr_ll& sll );
-*/
-
-		int recv    ( struct packet& pkt );
-		int send    ( struct packet& pkt );
+		int recv    ( struct pdu& pkt );
+		int send    ( struct pdu& pkt );
 
 		int socket( void ) const
 		{ return _sock; }

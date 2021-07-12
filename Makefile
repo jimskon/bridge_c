@@ -2,7 +2,7 @@
 
 PROGRAMS = bridge testbr
 
-SRCFILES = $(wildcard *.cpp)
+SRCFILES = $(wildcard *.cpp) $(wildcard pdu/*.cpp)
 OBJFILES = $(patsubst %.cpp,%.o,$(SRCFILES))
 
 CXX     := g++
@@ -15,7 +15,7 @@ RM       = rm -f
 
 all: $(PROGRAMS)
 
-bridge: bridge.o brmap.o iface.o packet.o packet_eth.o icmp4.o macaddr.o
+bridge: bridge.o brmap.o iface.o pdu/pdu.o pdu/pdu_eth.o pdu/pdu_ipv4.o pdu/pdu_udp.o pdu/pdu_tcp.o icmp4.o macaddr.o
 	$(CXX) -o $@ $^
 
 testbr: testbr.o brmap.o

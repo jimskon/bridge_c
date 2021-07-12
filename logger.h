@@ -26,12 +26,11 @@ class logger : public std::ostream
 		};
 
 		NullStream _null;
-		std::ostream* _os;
 		int        _level;
 
 	public:
 
-		logger() : _os( &std::clog ), _level(0)
+		logger() : _level(0)
 		{ ; }
 
 		virtual ~logger()
@@ -40,15 +39,12 @@ class logger : public std::ostream
 		void level( int level )
 		{ _level = level; }
 
-		logger& operator() ( int user ) {
-			_os = ( user <= _level ) ? &std::clog : &_null;
-			return *this;
-		}
-
-		template<class T>
-		std::ostream& operator<< ( const T &obj ) {
-			*_os << obj;
-			return *_os;
+		std::ostream& operator() ( int user ) {
+			if( user <= _level ) {
+				return std::clog;
+			} else {
+				return _null;
+			}
 		}
 };
 

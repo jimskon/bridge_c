@@ -7,7 +7,7 @@
 
 #include "brmap.h"
 #include "iface.h"
-#include "packet.h"
+#include "pdu/pdu.h"
 #include "icmp4.h"
 #include "logger.h"
 
@@ -17,7 +17,7 @@ int
 main( int argc, char *argv[] )
 {
 	logger  log;
-	iface if1( log ), if2( log );
+	iface  if1, if2;
 	struct timeval tv;
 	fd_set rfds;
 	int    fd1, fd2;
@@ -25,6 +25,7 @@ main( int argc, char *argv[] )
 	int    n;
 	int    len;
 	int    debug;
+	size_t off;
 	brmap  a_brmap( log );
 
 	uint8_t *x;
@@ -58,7 +59,7 @@ main( int argc, char *argv[] )
 	fd2 = if2.socket();
 	maxfd = ( fd1 > fd2 ) ? fd1 : fd2;
 
-	packet pkt( BUFLEN );
+	pdu pkt( BUFLEN );
 
 	for( ;; ) {
 		FD_ZERO( &rfds );
@@ -80,7 +81,7 @@ main( int argc, char *argv[] )
 			 * this would be a nice place to delete expired BNG entries though
 			 * (no need for timers/threads/locks since it'a all sequential).
 			 */
-			log(0) << "waiting..." << std::endl;
+			log( 3 ) << "waiting..." << std::endl;
 			continue;
 		}
 
@@ -95,19 +96,31 @@ main( int argc, char *argv[] )
 			if( n == 0 )
 				continue;
 
+			(void)pkt.filter( log( 1 ));
+
+/*
+			log(1) << pkt << std::endl;
+
+			off = pkt.payload_off();
+			pdu_eth pkt_eth( pkt, off );
+			log(1) << " > " << pkt_eth << std::endl;
+
+			off = pkt_eth.payload_off();
+			pdu_ipv4 pkt_ipv4( pkt_eth, off );
+			log(1) << "  > " << pkt_ipv4 << std::endl;
+*/
+
 			//short d = a_brmap.map_pkt(1,x);
 			short d = 0;
 
 			if ( n > if2.mtu() ) {
 				log(1) << "Packet too long: " << n << std::endl;
-				log(1) << pkt;
+				//log(1) << pkt;
 				log(1) << "Sending ICMP fragmentation needed" << std::endl;
 				n = icmp4_gen_needfrag( x+128, BUFLEN-128, x, if2.mtu() );
 				//(void)if1.send( x+128, n, sll );
 				continue;
 			}
-
-			log(1) << ' ' << pkt;
 
 			// Send to interface 2 if dest is 2 or broadcast
 			if( d == 2 || d == 0) {
@@ -131,19 +144,21 @@ main( int argc, char *argv[] )
 			if( n == 0 )
 				continue;
 
+			(void)pkt.filter( log( 1 ));
+
 			//short d = a_brmap.map_pkt(2,x);
 			short d = 0;
 
 			if ( n > if1.mtu() ) {
 				log(1) << "Packet too long: " << n << std::endl;
-				log(1) << pkt;
+				//log(1) << pkt;
 				log(1) << "Sending ICMP fragmentation needed" << std::endl;
 				n = icmp4_gen_needfrag( x+128, BUFLEN-128, x, if1.mtu() );
 				//(void)if1.send( x+128, n, sll );
 				continue;
 			}
 
-			log(1) << ' ' << pkt;
+			//log(1) << pkt << std::endl;
 
 			// Send to interface 1 if dest is 1 or broadcast
 			if( d == 1 || d == 0) {

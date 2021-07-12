@@ -18,7 +18,7 @@
 //  S T R U C T O R S  //
 //  - - - - - - - - -  //
 
-iface::iface( logger& log ) : _log( log )
+iface::iface()
 {
 	(void)::memset( _hwaddr, 0, sizeof( _hwaddr ));
 	_name  = "(null)";
@@ -144,7 +144,7 @@ std::ostream& operator<< ( std::ostream& os, const iface& obj )
 }
 
 int
-iface::recv( struct packet& pkt )
+iface::recv( struct pdu& pkt )
 {
 	socklen_t fromlen;
 	int n;
@@ -175,31 +175,11 @@ iface::recv( struct packet& pkt )
 	assert( sll.sll_family  == AF_PACKET );
 	assert( sll.sll_ifindex == _index );
 
-	_log << "sll_pkttype:  " << (int)sll.sll_pkttype << std::endl;
-	_log << "sll_hatype:   " <<      sll.sll_hatype  << std::endl;
-
-	/*
-	 * sll_protocol is in network byte order
-	 * (also available in the packet payload)
-	 *
-	 * we'd expect to see:
-	 *  . 0x8100 (ETH_P_8021Q) / 0x88a8 (ETH_P_8021AD) on the trunk (rXg side)
-	 *  . 0x0800 (ETH_P_IP) / 0x0806 (ETH_P_ARP) / 0x86dd (ETH_P_IPV6)
-	 *    on the WLAN (device side)
-	 *
-	 * note: can probably be used as a filter while bind()ing the trunk interface.
-	 *       quoting PACKET(7): "Fields used for binding are sll_family (should be
-	 *       AF_PACKET), sll_protocol, and sll_ifindex."
-	 *                   ^^^^^^^^^^^^
-	 */
-
-	_log << "sll_protocol: " << ::ntohs( sll.sll_protocol ) << std::endl;
-
 	return n;
 }
 
 int
-iface::send( struct packet& pkt )
+iface::send( struct pdu& pkt )
 {
 	struct ethhdr *eh;
 
