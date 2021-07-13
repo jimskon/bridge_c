@@ -108,6 +108,8 @@ pdu_ipv4::filter( std::ostream& log )
 				ih->check = in_cksum( _x, off );
 (void)fprintf( stderr, "*** CHECKSUMS: TCP: %04x, IP: %04x\n", ntohs( th->th_sum ), ntohs( ih->check ));
 			}
+
+			break;
 		}
 
 		case IPPROTO_UDP:
