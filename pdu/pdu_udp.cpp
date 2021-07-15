@@ -12,6 +12,7 @@
 int
 pdu_udp::filter( std::ostream& log )
 {
+#ifdef PDU_DEBUG
 	struct udphdr *uh = (struct udphdr*)_x;
 
 	log << " > UDP: "
@@ -20,8 +21,11 @@ pdu_udp::filter( std::ostream& log )
 	    << ntohs( uh->uh_dport )
 	    << ", length: " << _len
 	    << std::endl;
+#else
+	(void)log;
+#endif /*PDU_DEBUG*/
 
-	return 1;
+	return 0;
 }
 
 /*EoF*/

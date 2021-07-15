@@ -1,0 +1,75 @@
+
+#include <iostream>
+#include <cstring>
+
+#include "pdu/pdu_ipv4.h"
+#include "pdu/pdu_tcp.h"
+
+#include "tests/catch.hpp"
+
+
+//  - - - - - - - - - -  //
+//  T E S T S   S E T S  //
+//  - - - - - - - - - -  //
+
+static const uint8_t ip_tcp_syn_mss1400[] = {
+	/* IP header */
+	0x45, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x40, 0x00,  0x40, 0x06, 0x23, 0x94, 0x0a, 0x2b, 0x01, 0xd2,
+	0x0a, 0x2b, 0x01, 0x01,
+	/* TCP header */
+	                        0x63, 0xf8, 0x04, 0xd2,  0x29, 0x39, 0x05, 0xd5, 0x00, 0x00, 0x00, 0x00,
+	0xa0, 0x02, 0xff, 0xff, 0x18, 0xa2, 0x00, 0x00,  0x02, 0x04, 0x05, 0x78, 0x01, 0x03, 0x03, 0x06,
+	0x04, 0x02, 0x08, 0x0a, 0xce, 0x01, 0xb2, 0x98,  0x00, 0x00, 0x00, 0x00
+};
+
+static const uint8_t ip_tcp_syn_mss1460[] = {
+	/* IP header */
+	0x45, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x40, 0x00,  0x40, 0x06, 0x23, 0x94, 0x0a, 0x2b, 0x01, 0xd2,
+	0x0a, 0x2b, 0x01, 0x01,
+	/* TCP header */
+	                        0x63, 0xf8, 0x04, 0xd2,  0x29, 0x39, 0x05, 0xd5, 0x00, 0x00, 0x00, 0x00,
+	0xa0, 0x02, 0xff, 0xff, 0x18, 0x66, 0x00, 0x00,  0x02, 0x04, 0x05, 0xb4, 0x01, 0x03, 0x03, 0x06,
+	0x04, 0x02, 0x08, 0x0a, 0xce, 0x01, 0xb2, 0x98,  0x00, 0x00, 0x00, 0x00
+};
+
+static_assert(
+	sizeof( ip_tcp_syn_mss1400 ) == sizeof( ip_tcp_syn_mss1460 ),
+	"ip_tcp_syn_mss1400 and ip_tcp_syn_mss1460 differ in size"
+);
+
+
+//  - - - - - - - - - - -  //
+//  T E S T S   C A S E S  //
+//  - - - - - - - - - - -  //
+
+TEST_CASE( "MSS is clamped down when > 1400", "pdu_ipv4::adjust_mss" )
+{
+	uint8_t *x = new uint8_t[ sizeof( ip_tcp_syn_mss1460 ) ];
+
+	pdu_ipv4 ipv4 = pdu_ipv4( x, sizeof( ip_tcp_syn_mss1460 ));
+	pdu_tcp  tcp  = pdu_tcp( ipv4._x + 20, ipv4._len - 20 );
+
+	(void)::memcpy( x, ip_tcp_syn_mss1460, sizeof( ip_tcp_syn_mss1460 ));
+
+	REQUIRE( ipv4.filter( std::cout ) == 1 );
+	REQUIRE( ::memcmp( ipv4._x, ip_tcp_syn_mss1400, ipv4._len ) == 0 );
+
+	delete[] x;
+}
+
+TEST_CASE( "MSS is left untouched when <= 1400", "pdu_ipv4::adjust_mss" )
+{
+	uint8_t *x = new uint8_t[ sizeof( ip_tcp_syn_mss1400 ) ];
+
+	pdu_ipv4 ipv4 = pdu_ipv4( x, sizeof( ip_tcp_syn_mss1400 ));
+	pdu_tcp  tcp  = pdu_tcp( ipv4._x + 20, ipv4._len - 20 );
+
+	(void)::memcpy( x, ip_tcp_syn_mss1400, sizeof( ip_tcp_syn_mss1400 ));
+
+	REQUIRE( ipv4.filter( std::cout ) == 0 );
+	REQUIRE( ::memcmp( ipv4._x, ip_tcp_syn_mss1400, ipv4._len ) == 0 );
+
+	delete[] x;
+}
+
+/*EoF*/

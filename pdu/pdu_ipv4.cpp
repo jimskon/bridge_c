@@ -8,6 +8,7 @@
 #include "pdu_udp.h"
 #include "pdu_tcp.h"
 
+#ifdef PDU_DEBUG
 static const char*
 ipv4_proto_str( unsigned proto )
 {
@@ -22,6 +23,7 @@ ipv4_proto_str( unsigned proto )
 
 	return "";
 }
+#endif /*PDU_DEBUG*/
 
 static uint16_t
 in_cksum( const void *addr, int len, unsigned sum = 0 )
@@ -64,6 +66,7 @@ pdu_ipv4::filter( std::ostream& log )
 	struct iphdr *ih = (struct iphdr*)_x;
 	size_t off = ( ih->ihl << 2 );
 
+#ifdef PDU_DEBUG
 	struct in_addr saddr = { ih->saddr };
 	struct in_addr daddr = { ih->daddr };
 
@@ -77,6 +80,7 @@ pdu_ipv4::filter( std::ostream& log )
 	                    << ipv4_proto_str( ih->protocol )
 	    << ", length: " << _len
 	    << std::endl;
+#endif /*PDU_DEBUG*/
 
 	switch( ih->protocol ) {
 		case IPPROTO_TCP:
@@ -89,11 +93,11 @@ pdu_ipv4::filter( std::ostream& log )
 				 */
 				struct tcphdr   *th = (struct tcphdr*)tcp._x;
 				struct pseudohdr ph = {
-					ih->saddr,
-					ih->daddr,
-					0,
-					ih->protocol,
-					htons( (uint16_t)((_len-off) & 0xffff))
+					.saddr = ih->saddr,
+					.daddr = ih->daddr,
+					.zero  = 0,
+					.proto = ih->protocol,
+					.len   = htons( (uint16_t)((_len-off) & 0xffff))
 				};
 				const uint16_t *w = (const uint16_t*)&ph;
 				unsigned sum = 0;
@@ -106,7 +110,8 @@ pdu_ipv4::filter( std::ostream& log )
 				 */
 				ih->check = 0;
 				ih->check = in_cksum( _x, off );
-				//(void)fprintf( stderr, "*** CHECKSUMS: TCP: %04x, IP: %04x\n", ntohs( th->th_sum ), ntohs( ih->check ));
+
+				return 1;
 			}
 
 			break;
@@ -122,7 +127,7 @@ pdu_ipv4::filter( std::ostream& log )
 			;
 	}
 
-	return 1;
+	return 0;
 }
 
 /*EoF*/

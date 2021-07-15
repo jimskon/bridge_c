@@ -38,24 +38,24 @@ iface::~iface()
 //  - - - - - - -  //
 
 int
-iface::bind( const char *name )
+iface::bind( const char *ifname )
 {
 	struct sockaddr_ll sll;
 	struct ifreq req;
 
-	_name = name;
+	_name = std::string( ifname );
 
 	_sock = ::socket( AF_PACKET, SOCK_RAW, ::htons( ETH_P_ALL ));
 	if( _sock < 0 ) {
-		::perror( _name );
+		::perror( ifname );
 		return -1;
 	}
 
 	/* store the interface L2 address in _hwaddr (only used for debugging) */
 
-	(void)::strncpy( req.ifr_name, _name, IFNAMSIZ-1 );
+	(void)::strncpy( req.ifr_name, ifname, IFNAMSIZ-1 );
 	if( ::ioctl( _sock, SIOCGIFHWADDR, &req ) < 0 ) {
-		::perror( _name );
+		::perror( ifname );
 		(void)::close( _sock );
 		return -1;
 	}
@@ -65,7 +65,7 @@ iface::bind( const char *name )
 	/* store the interface index in _index */
 
 	if( ::ioctl( _sock, SIOCGIFINDEX, &req ) < 0 ) {
-		::perror( _name );
+		::perror( ifname );
 		(void)::close( _sock );
 		return -1;
 	}
@@ -75,7 +75,7 @@ iface::bind( const char *name )
 	/* store the interface MTU in _mtu */
 
 	if( ::ioctl( _sock, SIOCGIFMTU, &req ) < 0 ) {
-		::perror( _name );
+		::perror( ifname );
 		(void)::close( _sock );
 		return -1;
 	}
@@ -92,7 +92,7 @@ iface::bind( const char *name )
 	sll.sll_ifindex = _index;    /* only interested in packets captured from this interface */
 
 	if( ::bind( _sock, (const struct sockaddr*)&sll, sizeof( sll )) < 0 ) {
-		::perror( _name );
+		::perror( ifname );
 		(void)::close( _sock );
 		return -1;
 	}
@@ -116,14 +116,11 @@ iface::promisc( bool enable )
 		::setsockopt( _sock, SOL_PACKET, op, &mr, sizeof( mr ));
 }
 
-/*
 void
-iface::cleanup()
+iface::close()
 {
-	(void)promisc( false );
-	(void)::close( ifp->_sock );
+	(void)::close( _sock );
 }
-*/
 
 int
 iface::recv( struct pdu& pkt )

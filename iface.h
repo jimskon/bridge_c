@@ -2,16 +2,19 @@
 #ifndef _UBNG_IFACE_H
 #define _UBNG_IFACE_H
 
+#include <string>
 #include <ostream>
 
 #include "logger.h"
 #include "pdu/pdu.h"
 
+#include <net/ethernet.h>
+
 class iface
 {
 	private:
 
-		const char *_name;
+		std::string _name;
 		uint8_t     _hwaddr[ETH_ALEN];
 		int         _index;
 		int         _sock;
@@ -22,11 +25,12 @@ class iface
 		iface();
 		virtual ~iface();
 
-		int bind    ( const char *name );
-		int promisc ( bool enable );
+		int  bind    ( const char *ifname );
+		int  promisc ( bool enable );
+		void close   ( void );
 
-		int recv    ( struct pdu& pkt );
-		int send    ( struct pdu& pkt );
+		int  recv    ( struct pdu& pkt );
+		int  send    ( struct pdu& pkt );
 
 		int socket( void ) const
 		{ return _sock; }
@@ -34,7 +38,7 @@ class iface
 		int mtu( void ) const
 		{ return _mtu; }
 
-		const char* name() const
+		const std::string name() const
 		{ return _name; }
 
 		friend std::ostream& operator<< ( std::ostream& os, const iface& obj );

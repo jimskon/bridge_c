@@ -1,5 +1,6 @@
 bridge
 testbr
 tags
+runtests
 *.o
 *.swp

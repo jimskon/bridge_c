@@ -8,6 +8,7 @@
 
 #include "pdu_tcp.h"
 
+#ifdef PDU_DEBUG
 static const char *tcp_flags[6] = { "URG", "ACK", "PSH", "RST", "SYN", "FIN" };
 
 static void
@@ -24,6 +25,7 @@ tcp_flags_dump( std::ostream& log, unsigned flags )
 		mask >>= 1;
 	}
 }
+#endif /*PDU_DEBUG*/
 
 //  - - - - - -  //
 //  P U B L I C  //
@@ -35,6 +37,7 @@ pdu_tcp::filter( std::ostream& log )
 	struct tcphdr *th = (struct tcphdr*)_x;
 	size_t off = ( th->th_off << 2);
 
+#ifdef PDU_DEBUG
 	log << " > TCP: "
 	    << ntohs( th->th_sport )
 	    << " -> "
@@ -46,6 +49,9 @@ pdu_tcp::filter( std::ostream& log )
 	tcp_flags_dump( log, th->th_flags );
 
 	log << '>' << std::endl;
+#else
+	(void)log;
+#endif /*PDU_DEBUG*/
 
 	if(( th->th_flags & TH_SYN ) == 0 )
 		return 0; /* not a SYN ? don't bother */
@@ -54,18 +60,21 @@ pdu_tcp::filter( std::ostream& log )
 		return 0; /* no TCP options ? don't bother */
 
 	return
-		adjust_mss( _x + 20, off - 20 );
+		adjust_mss();
 }
 
 int
-pdu_tcp::adjust_mss( uint8_t *x, size_t len )
+pdu_tcp::adjust_mss()
 {
 	size_t   olen;
 	uint16_t mss;
 	unsigned opt;
 
-	int      mod = 0;
+	uint8_t *x   = _x + 20;
+	size_t  len  = _len - 20;
 	uint8_t *end = x + len;
+
+	int mod = 0;
 
 	while( x < end ) {
 		opt = x[0];

@@ -1,21 +1,37 @@
-# Make bridge_c
 
-PROGRAMS = bridge testbr
+PROGRAMS  = bridge testbr runtests
 
-SRCFILES = $(wildcard *.cpp) $(wildcard pdu/*.cpp)
-OBJFILES = $(patsubst %.cpp,%.o,$(SRCFILES))
+SRCPDU    = $(wildcard pdu/*.cpp)
+OBJPDU    = $(patsubst %.cpp,%.o,$(SRCPDU))
+LIBPDU    = pdu/libpdu.a
 
-CXX     := g++
-CPPFLAGS = -I.
-CXXFLAGS = -Wall -Wextra -std=c++11 -O1 $(CPPFLAGS)
-CHECK    = cppcheck -q --enable=style,warning $(CPPFLAGS)
-CTAGS    = ctags -a
-RM       = rm -f
+SRCEVENT  = $(wildcard event/*.cpp)
+OBJEVENT  = $(patsubst %.cpp,%.o,$(SRCEVENT))
+LIBEVENT  = event/libevent.a
+
+SRCTESTS  = $(wildcard tests/*.cpp)
+OBJTESTS  = $(patsubst %.cpp,%.o,$(SRCTESTS))
+
+SRCFILES  = $(SRCPDU) $(wildcard *.cpp)
+OBJFILES  = $(patsubst %.cpp,%.o,$(SRCFILES))
+
+LIBRARIES = $(LIBPDU)
+
+CXX      := g++
+CPPFLAGS  = -I.
+#ARMFLAGS  = -marm #-march=armv7-a
+ARMFLAGS  = -marm
+CXXFLAGS  = -Wall -Wextra -std=c++11 -O3 $(ARMFLAGS) $(CPPFLAGS)
+#CXXFLAGS  += -g
+CHECK     = cppcheck -q --enable=style,warning $(CPPFLAGS)
+CTAGS     = ctags -a
+AR        = ar rcs
+RM        = rm -f
 
 
 all: $(PROGRAMS)
 
-bridge: bridge.o brmap.o iface.o pdu/pdu.o pdu/pdu_eth.o pdu/pdu_ipv4.o pdu/pdu_udp.o pdu/pdu_tcp.o icmp4.o macaddr.o
+bridge: main.o ifbridge.o brmap.o iface.o icmp4.o macaddr.o $(LIBRARIES)
 	$(CXX) -o $@ $^ -lpthread
 
 testbr: testbr.o brmap.o
@@ -24,8 +40,18 @@ testbr: testbr.o brmap.o
 testsend: testsend.o brmap.o
 	$(CXX) -o $@ $^ -lpthread
 
+runtests: $(OBJTESTS) macaddr.o $(LIBRARIES)
+	$(CXX) -o $@ $^
+
+$(LIBPDU): $(OBJPDU)
+	$(AR) $@ $^
+
+$(LIBEVENT): $(OBJEVENT)
+	$(AR) $@ $^
+
 clean:
-	$(RM) $(PROGRAMS) $(OBJFILES)
+	$(RM) $(PROGRAMS) $(LIBRARIES)
+	$(RM) $(OBJFILES)
 
 check:
 	$(CHECK) $(SRCFILES)

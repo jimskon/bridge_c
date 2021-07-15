@@ -1,5 +1,6 @@
 
 #include <cstdio>
+#include <cstring>
 
 #include "macaddr.h"
 
@@ -7,12 +8,14 @@
 //  S T R U C T O R S  //
 //  - - - - - - - - -  //
 
-macaddr::macaddr( const uint8_t* x ) : _x( x )
-{ ; }
+macaddr::macaddr( const uint8_t* x )
+{
+	(void)::memcpy( _x, x, ETH_ALEN );
+}
 
-//  - - - - - - -  //
-//  O S T R E A M  //
-//  - - - - - - -  //
+//  - - - - - - - - -  //
+//  O P E R A T O R S  //
+//  - - - - - - - - -  //
 
 std::ostream&
 operator<< ( std::ostream& os, const macaddr& mac )

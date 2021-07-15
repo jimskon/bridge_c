@@ -21,6 +21,8 @@ struct pdu
 	virtual ~pdu();
 
 	virtual int filter( std::ostream& log );
+
+	std::ostream& hexdump( std::ostream& log );
 };
 
 #endif /*_UBNG_PDU_H*/
