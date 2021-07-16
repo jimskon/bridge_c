@@ -259,7 +259,6 @@ ifbridge::fwd_upstream( pdu& pkt, iface *src )
 				if( kv == _addr2if.end() ) {
 					_log(2) << '[' << src->name() << "] add host " << addr << std::endl;
 					_addr2if.emplace( addr, src );
-					break;
 				}
 				// XXX also remember to update existing entries
 				// XXX (case of mobile devices roaming from one interface to another)
