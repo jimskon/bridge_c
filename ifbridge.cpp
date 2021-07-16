@@ -1,7 +1,9 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <cstdio>
+#include <cstdlib>
+#include <csignal>
+
+#include <arpa/inet.h>
 
 #include "brmap.h"
 #include "iface.h"
@@ -13,6 +15,9 @@
 
 #define BUFLEN 16384
 
+#ifdef PROFILE
+extern volatile bool ctrlc;
+#endif
 
 //  - - - - - - - - -  //
 //  S T R U C T O R S  //
@@ -161,6 +166,15 @@ ifbridge::run()
 	for( ;; ) {
 		nev = epoll_wait( _epollfd, ev, _maxev, 1000 );
 		if( nev < 0 ) {
+#ifdef PROFILE
+			if( errno == EINTR ) {
+				if( ctrlc ) {
+					_log(0) << "interrupted by user" << std::endl;
+					break;
+				}
+				continue;
+			}
+#endif
 			perror( "epoll_wait()" );
 			break;
 		}
@@ -245,8 +259,7 @@ ifbridge::fwd_upstream( pdu& pkt, iface *src )
 			macaddr addr( pkt._x + ETH_ALEN );
 			auto kv = _addr2if.find( addr );
 			if( kv == _addr2if.end() ) {
-				_log(3) << "adding host " << addr << " on interface " << src->name() << std::endl;
-				//_addr2if.insert({ addr, src }); // XXX emplace ?
+				_log(2) << '[' << src->name() << "] add host " << addr << std::endl;
 				_addr2if.emplace( addr, src );
 				break;
 			}

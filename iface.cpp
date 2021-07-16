@@ -84,7 +84,6 @@ iface::bind( const char *ifname )
 
 	/*
 	 * populate a sockaddr_ll instance and bind the interface to it
-	 * (might set sll_protocol here as well -- see note in iface::recv())
 	 */
 
 	(void)::memset( &sll, 0, sizeof( sll ));

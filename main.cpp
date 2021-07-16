@@ -1,11 +1,17 @@
 
 #include <cstdlib>
+#include <csignal>
 
 #include "ifbridge.h"
 #include "iface.h"
 #include "logger.h"
 
 #define MESSPORT 9000
+
+#ifdef PROFILE
+volatile bool ctrlc = false;
+void sigint_handler( int ) { ctrlc = true; }
+#endif
 
 int
 main( int argc, char *argv[] )
@@ -24,12 +30,16 @@ main( int argc, char *argv[] )
 
 	const char *debug = getenv( "DEBUG" );
 	if( debug != NULL )
-		log.level( ::atoi( debug ));
+		log.level( std::atoi( debug ));
 
 	if( trunk.bind( argv[1] ) != 0 ) {
 		std::cerr << "can't bind the trunk" << std::endl;
 		exit( 1 );
 	}
+
+#ifdef PROFILE
+	std::signal( SIGINT, sigint_handler );
+#endif
 
 	/*
 	 * Now that we have a logger and the trunk, we can

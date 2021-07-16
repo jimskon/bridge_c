@@ -23,25 +23,35 @@ CPPFLAGS  = -I.
 ARMFLAGS  = -marm
 CXXFLAGS  = -Wall -Wextra -std=c++11 -O3 $(ARMFLAGS) $(CPPFLAGS)
 #CXXFLAGS  += -g
+LDFLAGS   = -lpthread
 CHECK     = cppcheck -q --enable=style,warning $(CPPFLAGS)
 CTAGS     = ctags -a
 AR        = ar rcs
 RM        = rm -f
 
+ifdef DEBUG
+ CXXFLAGS += -g
+ LDFLAGS  += -g
+endif
+
+ifdef PROFILE
+ CXXFLAGS += -pg -DPROFILE
+ LDFLAGS  += -pg
+endif
 
 all: $(PROGRAMS)
 
 bridge: main.o ifbridge.o brmap.o iface.o icmp4.o macaddr.o $(LIBRARIES)
-	$(CXX) -o $@ $^ -lpthread
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 testbr: testbr.o brmap.o
-	$(CXX) -o $@ $^ -lpthread
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 testsend: testsend.o brmap.o
-	$(CXX) -o $@ $^ -lpthread
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 runtests: $(OBJTESTS) macaddr.o $(LIBRARIES)
-	$(CXX) -o $@ $^
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(LIBPDU): $(OBJPDU)
 	$(AR) $@ $^
