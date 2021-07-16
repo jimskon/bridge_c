@@ -2,5 +2,6 @@ bridge
 testbr
 tags
 runtests
+gmon.out
 *.o
 *.swp

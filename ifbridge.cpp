@@ -255,7 +255,7 @@ ifbridge::fwd_upstream( pdu& pkt, iface *src )
 		case PACKET_BROADCAST:
 		case PACKET_MULTICAST:
 		case PACKET_OTHERHOST:
-		{
+		if( pkt._sll.sll_protocol == ::htons( ETHERTYPE_ARP )) {
 			macaddr addr( pkt._x + ETH_ALEN );
 			auto kv = _addr2if.find( addr );
 			if( kv == _addr2if.end() ) {
@@ -263,13 +263,12 @@ ifbridge::fwd_upstream( pdu& pkt, iface *src )
 				_addr2if.emplace( addr, src );
 				break;
 			}
-
 			// XXX also remember to update existing entries
 			// XXX (case of mobile devices roaming from one interface to another)
-
-			_trunk.send( pkt );
-			break;
 		}
+
+		_trunk.send( pkt );
+		break;
 
 		default:
 			_log(3) << "unsupported packet type (upstream)" << std::endl;
