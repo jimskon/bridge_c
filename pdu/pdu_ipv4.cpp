@@ -106,7 +106,7 @@ pdu_ipv4::filter( std::ostream& log )
 				 */
 				ih->check = 0;
 				ih->check = in_cksum( _x, off );
-(void)fprintf( stderr, "*** CHECKSUMS: TCP: %04x, IP: %04x\n", ntohs( th->th_sum ), ntohs( ih->check ));
+				//(void)fprintf( stderr, "*** CHECKSUMS: TCP: %04x, IP: %04x\n", ntohs( th->th_sum ), ntohs( ih->check ));
 			}
 
 			break;

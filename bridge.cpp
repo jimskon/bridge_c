@@ -12,6 +12,8 @@
 #include "logger.h"
 
 #define BUFLEN 9000
+/*  Port used to recieve messages from hostapd */
+#define MESSPORT 9000
 
 int
 main( int argc, char *argv[] )
@@ -51,6 +53,10 @@ main( int argc, char *argv[] )
 	log(1) << if1 << std::endl;
 	log(1) << if2 << std::endl;
 
+	/*  Start bridge listener (for vlan assignments) */
+	int port = MESSPORT;
+        a_brmap.start_listener(port);
+	
 	x = (uint8_t *) malloc( BUFLEN );
 	assert( x != NULL );
 

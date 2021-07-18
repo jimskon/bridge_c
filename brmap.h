@@ -4,108 +4,44 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <net/ethernet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include "MACADDR.h"
 
 #include "logger.h"
 
 using namespace std;
 
-/* A mac address class */
-class MACADDR {
-  public:
-    unsigned char mac[ETH_ALEN]={0};
-    MACADDR() {}
-    MACADDR(unsigned char a[ETH_ALEN]) {
-      for (int i=0; i<ETH_ALEN; i++) {
-        mac[i]=a[i];
-      }
-    }
+#define ETHERTYPE_VLAN 0x8100
+#define ETHERTYPE_QINQ 0x88a8
 
-    void set(unsigned char a[ETH_ALEN]) {
-      for (int i=0; i<ETH_ALEN; i++) {
-        mac[i]=a[i];
-      }
-    }
-    bool operator<(const MACADDR a) const {
-      for (int i=0; i<ETH_ALEN; i++) {
-        if (a.mac[i] < this->mac[i])
-          return false;
-        if (a.mac[i] > this->mac[i])
-          return true;
-      }
-      return false;
-    }
-    bool operator=(const MACADDR a) const {
-      for (int i=0; i<ETH_ALEN; i++) {
-        if (a.mac[i]!=this->mac[i])
-          return false;
-      }
-      return true;
-    }
-    void print() const {
-      cout << hex;
-      for (int i=0; i<ETH_ALEN; i++) {
-        cout << (int) this->mac[i] << ' ';
-      }
-      cout << dec;
-    }
-    bool is_broadcast() {
-      for (int i=0; i<ETH_ALEN; i++) {
-        if (mac[i]!=0xff) return false;
-      }
-      return true;
-    }
-
-    bool is_multicast() {
-
-      if (mac[0] & 0x01) {
-      return true;
-      }
-    return false;
-    }
-
-    void get_dest_mac(unsigned char *packet)   {
-        for (int i=0; i<ETH_ALEN; i++) {
-          mac[i]=packet[i];
-        }
-    }
-
-    void get_src_mac(unsigned char *packet)   {
-        for (int i=0; i<ETH_ALEN; i++) {
-          mac[i]=packet[i+ETH_ALEN];
-        }
-    }
-
-  void random_mac() {
-    int i;
-    for (i = 0; i < ETH_ALEN; i++) {
-      mac[i] = rand() % 256;
-    }
-  }
+struct vid_mess {
+        uint8_t          be_haddr[ETHER_ADDR_LEN];    // MAC address
+        uint32_t         be_proto : 16;               // protocol: either ETHERTYPE_VLAN (0x8100) or ETHERTYPE_QINQ (0x88a8)
+        uint32_t         be_vid   : 12;               // VLAN id
+        uint32_t         be_flags :  4;               // flags - only one defined at the moment (differentiate between static/dynamic entry)
+        int              be_updat;                    // last update time (unit: system ticks)
 };
-
 
 /* A bridge entry class */
 class Bridge_entry {
   public:
-    short src_interface;
-    short vid;
+    int src_interface;
+    uint32_t vid;
     MACADDR mac;
     unsigned int ttl;
-    Bridge_entry(short src, short v) {
-      src_interface = src;
-      vid = v;
-    }
-    Bridge_entry(short src) {
-      src_interface = src;
-      vid = 0;
-    }
     Bridge_entry() {
       src_interface = 0;
       vid = 0;
     }
-
+  Bridge_entry(uint32_t src, uint32_t v=0) {
+      src_interface = src;
+      vid = v;
+    }
 };
 
+// A structure for passing 
 class brmap {
 
  private:
@@ -120,4 +56,7 @@ class brmap {
 
     int map_pkt(int pkt_src, unsigned char *packet);
 
+    void add_vid(unsigned char * mac, uint32_t v);
+
+    void start_listener(int port);
 };

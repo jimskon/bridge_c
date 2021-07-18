@@ -7,7 +7,7 @@ OBJFILES = $(patsubst %.cpp,%.o,$(SRCFILES))
 
 CXX     := g++
 CPPFLAGS = -I.
-CXXFLAGS = -Wall -Wextra -std=c++11 -O2 $(CPPFLAGS)
+CXXFLAGS = -Wall -Wextra -std=c++11 -O1 $(CPPFLAGS)
 CHECK    = cppcheck -q --enable=style,warning $(CPPFLAGS)
 CTAGS    = ctags -a
 RM       = rm -f
@@ -16,10 +16,13 @@ RM       = rm -f
 all: $(PROGRAMS)
 
 bridge: bridge.o brmap.o iface.o pdu/pdu.o pdu/pdu_eth.o pdu/pdu_ipv4.o pdu/pdu_udp.o pdu/pdu_tcp.o icmp4.o macaddr.o
-	$(CXX) -o $@ $^
+	$(CXX) -o $@ $^ -lpthread
 
 testbr: testbr.o brmap.o
-	$(CXX) -o $@ $^
+	$(CXX) -o $@ $^ -lpthread
+
+testsend: testsend.o brmap.o
+	$(CXX) -o $@ $^ -lpthread
 
 clean:
 	$(RM) $(PROGRAMS) $(OBJFILES)
