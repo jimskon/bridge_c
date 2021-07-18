@@ -10,7 +10,7 @@ struct pdu_ipv4 final : public pdu
 	{ ; }
 
 	pdu_ipv4( const pdu& other, size_t off )
-		: pdu( other._x + off, other._len - off )
+		: pdu( other._x + off, other._len - off, other._dir )
 	{ ; }
 
 	virtual ~pdu_ipv4()

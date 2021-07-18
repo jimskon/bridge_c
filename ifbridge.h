@@ -40,6 +40,8 @@ class ifbridge
 		iface* add_iface ( const char *ifname );
 		int    del_iface ( const char *ifname );
 		iface* get_iface ( const char *ifname ) const;
+
+		void   add_host  ( macaddr& addr, iface *ifp );
 };
 
 #endif /*_UBNG_IFBRIDGE_H*/

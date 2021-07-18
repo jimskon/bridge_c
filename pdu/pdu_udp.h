@@ -10,7 +10,7 @@ struct pdu_udp final : public pdu
 	{ ; }
 
 	pdu_udp( const pdu& other, size_t off )
-		: pdu( other._x + off, other._len - off )
+		: pdu( other._x + off, other._len - off, other._dir )
 	{ ; }
 
 	virtual ~pdu_udp()

@@ -135,10 +135,22 @@ ifbridge::get_iface( const char *ifname ) const
 {
 	auto kv = _name2if.find( ifname );
 
-	if( kv != _name2if.end() )
+	if( kv == _name2if.end() )
 		return (iface*)0;
 
 	return kv->second;
+}
+
+void
+ifbridge::add_host( macaddr& addr, iface *ifp )
+{
+	auto kv = _addr2if.find( addr );
+	if( kv == _addr2if.end() ) {
+		_log(2) << '[' << ifp->name() << "] add host " << addr << std::endl;
+		_addr2if.emplace( addr, ifp );
+	}
+	// XXX also remember to update existing entries
+	// XXX (case of mobile devices roaming from one interface to another)
 }
 
 void
@@ -185,7 +197,7 @@ ifbridge::run()
 			 * this would be a nice place to delete expired BNG entries though
 			 * (no need for timers/threads/locks since it'a all sequential).
 			 */
-			_log( 3 ) << "waiting..." << std::endl;
+			_log(5) << "waiting..." << std::endl;
 			continue;
 		}
 
@@ -201,6 +213,8 @@ ifbridge::run()
 
 			if( n == 0 )
 				continue;
+
+			pkt._dir = ( ifp == &_trunk ) ? pdu::DIR_DNSTREAM : pdu::DIR_UPSTREAM;
 
 			(void)pkt.filter( _log( 1 ));
 
@@ -233,7 +247,7 @@ ifbridge::fwd_dnstream( pdu& pkt )
 			macaddr addr( pkt._x );
 			auto kv = _addr2if.find( addr );
 			if( kv == _addr2if.end() ) {
-				_log(3) << "MAC " << addr << " unknown host" << std::endl;
+				_log(2) << "MAC " << addr << " unknown host" << std::endl;
 				break;
 			}
 			ifp = kv->second;
@@ -255,13 +269,7 @@ ifbridge::fwd_upstream( pdu& pkt, iface *src )
 		case PACKET_BROADCAST:
 			{
 				macaddr addr( pkt._x + ETH_ALEN );
-				auto kv = _addr2if.find( addr );
-				if( kv == _addr2if.end() ) {
-					_log(2) << '[' << src->name() << "] add host " << addr << std::endl;
-					_addr2if.emplace( addr, src );
-				}
-				// XXX also remember to update existing entries
-				// XXX (case of mobile devices roaming from one interface to another)
+				add_host( addr, src );
 			}
 			/*FALLTHROUGH*/
 

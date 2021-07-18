@@ -21,16 +21,21 @@ static const char* pkttypes[] = {
 //  S T R U C T O R S  //
 //  - - - - - - - - -  //
 
-pdu::pdu( size_t cap )
+pdu::pdu( size_t cap, direction_t dir )
 {
 	_x   = new uint8_t[ cap ];
 	_cap = cap;
 	_len = 0;
+	_dir = dir;
 }
 
-pdu::pdu( uint8_t *x, size_t len )
-	: _x( x ), _cap( 0 ), _len( len )
-{ ; }
+pdu::pdu( uint8_t *x, size_t len, direction_t dir )
+{
+	_x   = x;
+	_cap = 0;
+	_len = len;
+	_dir = dir;
+}
 
 pdu::~pdu()
 {
