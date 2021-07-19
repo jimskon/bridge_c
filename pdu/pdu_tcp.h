@@ -17,7 +17,7 @@ struct pdu_tcp final : public pdu
 	{ ; }
 
 	int filter( std::ostream& log ) override;
-	int adjust_mss( void );
+	int adjust_mss( std::ostream& log );
 };
 
 #endif /*_UBNG_PDU_TCP_H*/

@@ -38,11 +38,16 @@ class iface
 		int mtu( void ) const
 		{ return _mtu; }
 
-		const std::string name() const
+		const std::string name( void ) const
 		{ return _name; }
 
 		friend std::ostream& operator<< ( std::ostream& os, const iface& obj );
 };
+
+extern bool operator == ( const ether_addr& a, const ether_addr& b );
+extern bool operator <  ( const ether_addr& a, const ether_addr& b );
+extern bool operator >  ( const ether_addr& a, const ether_addr& b );
+extern std::ostream& operator<< ( std::ostream& os, const ether_addr& addr );
 
 #endif /*_UBNG_IFACE_H*/
 

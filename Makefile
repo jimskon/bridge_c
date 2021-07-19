@@ -50,7 +50,7 @@ testbr: testbr.o brmap.o
 testsend: testsend.o brmap.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
-runtests: $(OBJTESTS) macaddr.o $(LIBRARIES)
+runtests: $(OBJTESTS) iface.o macaddr.o $(LIBRARIES)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(LIBPDU): $(OBJPDU)

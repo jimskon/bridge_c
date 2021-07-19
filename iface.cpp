@@ -10,6 +10,8 @@
 #include <net/if.h>
 #include <net/ethernet.h>
 #include <linux/if_packet.h>
+#include <linux/ethtool.h>
+#include <linux/sockios.h>
 
 #include "brmap.h"
 #include "iface.h"
@@ -41,7 +43,7 @@ int
 iface::bind( const char *ifname )
 {
 	struct sockaddr_ll sll;
-	struct ifreq req;
+	struct ifreq ifr;
 
 	_name = std::string( ifname );
 
@@ -53,34 +55,34 @@ iface::bind( const char *ifname )
 
 	/* store the interface L2 address in _hwaddr (only used for debugging) */
 
-	(void)::strncpy( req.ifr_name, ifname, IFNAMSIZ-1 );
-	if( ::ioctl( _sock, SIOCGIFHWADDR, &req ) < 0 ) {
+	(void)::strncpy( ifr.ifr_name, ifname, IFNAMSIZ-1 );
+	if( ::ioctl( _sock, SIOCGIFHWADDR, &ifr ) < 0 ) {
 		::perror( ifname );
 		(void)::close( _sock );
 		return -1;
 	}
 
-	(void)::memcpy( _hwaddr, req.ifr_hwaddr.sa_data, ETH_ALEN );
+	(void)::memcpy( _hwaddr, ifr.ifr_hwaddr.sa_data, ETH_ALEN );
 
 	/* store the interface index in _index */
 
-	if( ::ioctl( _sock, SIOCGIFINDEX, &req ) < 0 ) {
+	if( ::ioctl( _sock, SIOCGIFINDEX, &ifr ) < 0 ) {
 		::perror( ifname );
 		(void)::close( _sock );
 		return -1;
 	}
 
-	_index = req.ifr_ifindex;
+	_index = ifr.ifr_ifindex;
 
 	/* store the interface MTU in _mtu */
 
-	if( ::ioctl( _sock, SIOCGIFMTU, &req ) < 0 ) {
+	if( ::ioctl( _sock, SIOCGIFMTU, &ifr ) < 0 ) {
 		::perror( ifname );
 		(void)::close( _sock );
 		return -1;
 	}
 
-	_mtu = req.ifr_mtu;
+	_mtu = ifr.ifr_mtu;
 
 	/*
 	 * populate a sockaddr_ll instance and bind the interface to it
@@ -186,7 +188,8 @@ iface::send( struct pdu& pkt )
 //  S T A T I C  //
 //  - - - - - -  //
 
-std::ostream& operator<< ( std::ostream& os, const iface& obj )
+std::ostream&
+operator<< ( std::ostream& os, const iface& obj )
 {
 	char straddr[12+5+1];
 
@@ -200,6 +203,34 @@ std::ostream& operator<< ( std::ostream& os, const iface& obj )
 	   << ", mtu: "    << obj._mtu
 	   << ", hwaddr: " << straddr
 	;
+
+	return os;
+}
+
+bool
+operator == ( const ether_addr& a, const ether_addr& b )
+{ return ( memcmp( a.ether_addr_octet, b.ether_addr_octet, ETH_ALEN ) == 0 ); }
+
+bool
+operator < ( const ether_addr& a, const ether_addr& b )
+{ return ( memcmp( a.ether_addr_octet, b.ether_addr_octet, ETH_ALEN ) < 0 ); }
+
+bool
+operator > ( const ether_addr& a, const ether_addr& b )
+{ return ( memcmp( a.ether_addr_octet, b.ether_addr_octet, ETH_ALEN ) > 0 ); }
+
+std::ostream&
+operator << ( std::ostream& os, const ether_addr& a )
+{
+	const uint8_t *x = a.ether_addr_octet;
+	char tmp[12+5+1];
+
+	(void)snprintf( tmp, sizeof( tmp ),
+		"%02x:%02x:%02x:%02x:%02x:%02x",
+		x[0], x[1], x[2], x[3], x[4], x[5]
+	);
+
+	os << tmp;
 
 	return os;
 }

@@ -56,15 +56,21 @@ pdu_tcp::filter( std::ostream& log )
 	if(( th->th_flags & TH_SYN ) == 0 )
 		return 0; /* not a SYN ? don't bother */
 
+	log << " > TCP: "
+	    << ntohs( th->th_sport )
+	    << " -> "
+	    << ntohs( th->th_dport )
+	;
+
 	if( off == 20 )
 		return 0; /* no TCP options ? don't bother */
 
 	return
-		adjust_mss();
+		adjust_mss( log );
 }
 
 int
-pdu_tcp::adjust_mss()
+pdu_tcp::adjust_mss( std::ostream& log )
 {
 	size_t   olen;
 	uint16_t mss;
@@ -102,6 +108,7 @@ pdu_tcp::adjust_mss()
 			(void)::memcpy( &mss, x+2, sizeof( mss ));
 			// adjust to 1400 for now
 			if( ntohs( mss ) > 1400 ) {
+				log << " MSS: " << htons( mss );
 				mss = htons( 1400 );
 				(void)::memcpy( x+2, &mss, sizeof( mss ));
 				mod = 1;
@@ -110,6 +117,8 @@ pdu_tcp::adjust_mss()
 
 		x += olen;
 	}
+
+	log << std::endl;
 
 	return mod;
 }
