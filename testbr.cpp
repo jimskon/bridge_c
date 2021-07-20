@@ -23,35 +23,50 @@ int main() {
     logger log;
     MACADDR a,b;
     brmap bridge( log );
-
-    bridge.map_pkt(1,pkt1);
-    bridge.map_pkt(2,pkt2);
-    bridge.map_pkt(3,pkt3);
-    bridge.map_pkt(4,pkt4);
-    for (int i=0;i<1000000;i++){
+    int port = 7745;
+    
+    log.level(1);
+    //    bridge.map_pkt(1,pkt1);
+    //bridge.map_pkt(2,pkt2);
+    //bridge.map_pkt(3,pkt3);
+    //bridge.map_pkt(4,pkt4);
+    //bridge.print();
+    //bridge.add_vid(pkt2,222);
+    //bridge.add_vid(&pkt2[6],222);
+    //bridge.add_vid(pkt3,333);
+    //bridge.add_vid(&pkt3[6],444);
+    //bridge.print();
+    // Make some random packets
+    /*
+      for (int i=0;i<3;i++){
       MACADDR a,b;
       a.random_mac();
       b.random_mac();
-      //a.print();
-      //b.print();
-      for (int j=0; j<2;j++) {
+      for (int j=0; j<6;j++) {
 	pkt[j]=a.mac[j];
 	pkt[j+6]=b.mac[j];
       }
-      short inter=rand()%16;
-      bridge.map_pkt(inter,pkt);
-      //printpacket("pkt",pkt,12);
-      //cout << "Inter:" << inter << endl;
-      //cout << "TO:" << bridge.map_pkt(inter,pkt) << endl;
-    }
-    //printpacket("pkt1",pkt,12);
-    //cout << bridge.map_pkt(3,pkt1) << endl;
-    //printpacket("pkt2",pkt,12);
-    //cout << bridge.map_pkt(2,pkt2) << endl;
-    //printpacket("pkt3",pkt,12);
-    //cout << bridge.map_pkt(6,pkt3) << endl;
-    //printpacket("pkt4",pkt,12);
-    //cout << bridge.map_pkt(2,pkt4) << endl;
 
-    //bridge.print();
+      uint32_t inter=rand()%16;
+      uint32_t vid=rand()%4096;
+      bridge.map_pkt(inter,pkt);
+      bridge.add_vid(b.mac,vid);
+    }
+    bridge.print();
+    // add some random vlans
+    for (int i=0;i<3;i++){
+      MACADDR a;
+      a.random_mac();
+    uint32_t vid=rand()%4096;
+      bridge.add_vid(a.mac,vid);
+    }
+    bridge.print();
+    */
+
+    unsigned int microsecond = 1000000;
+    bridge.start_listener(port);
+    for (;;) {
+      bridge.print();
+      usleep(10 * microsecond);//sleeps for 10 second
+    }
 }

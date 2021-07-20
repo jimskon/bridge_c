@@ -13,7 +13,7 @@
 
 #define BUFLEN 9000
 /*  Port used to recieve messages from hostapd */
-#define MESSPORT 9000
+#define MESSPORT 7448
 
 int
 main( int argc, char *argv[] )
@@ -115,9 +115,9 @@ main( int argc, char *argv[] )
 			log(1) << "  > " << pkt_ipv4 << std::endl;
 */
 
-			//short d = a_brmap.map_pkt(1,x);
-			short d = 0;
-
+			int vid;
+			short d = a_brmap.map_pkt(1,pkt._x,&vid);
+			//short d = 0;
 			if ( n > if2.mtu() ) {
 				log(1) << "Packet too long: " << n << std::endl;
 				//log(1) << pkt;
@@ -151,8 +151,9 @@ main( int argc, char *argv[] )
 
 			(void)pkt.filter( log( 1 ));
 
-			//short d = a_brmap.map_pkt(2,x);
-			short d = 0;
+			int vid;
+			short d = a_brmap.map_pkt(2,pkt._x,&vid);
+			//short d = 0;
 
 			if ( n > if1.mtu() ) {
 				log(1) << "Packet too long: " << n << std::endl;

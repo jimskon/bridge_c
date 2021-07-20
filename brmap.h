@@ -15,8 +15,8 @@ using namespace std;
 
 #define ETHERTYPE_VLAN 0x8100
 #define ETHERTYPE_QINQ 0x88a8
-#define VLAN_ASSIGN_CONN_TYPE AF_UNIX
-//#define VLAN_ASSIGN_CONN_TYPE INET_UNIX
+//#define VLAN_ASSIGN_CONN_TYPE AF_UNIX
+#define VLAN_ASSIGN_CONN_TYPE AF_INET
 
 struct vid_mess
 {
@@ -32,22 +32,22 @@ class Bridge_entry
 {
 public:
   int src_interface;
-  uint32_t vid;
-  MACADDR mac;
+  uint32_t vid;   // vid = -1 if unassigned
+  MACADDR mac;    
   unsigned int ttl;
-    Bridge_entry ()
+  Bridge_entry ()
   {
     src_interface = 0;
-    vid = 0;
+    vid = -1;
   }
-  Bridge_entry (uint32_t src, uint32_t v = 0)
+  Bridge_entry (uint32_t src, uint32_t v = -1)
   {
     src_interface = src;
     vid = v;
   }
 };
 
-// A structure for passing 
+/*  A structure for for a transparent bridge map with vlans */ 
 class brmap
 {
 
@@ -56,12 +56,14 @@ private:
   logger & _log;
 
 public:
-
+  int sockfd;
+  int readsockfd;
+  static brmap *thismap;
   brmap (logger & log);		// Constructor
 
   void print ();
 
-  int map_pkt (int pkt_src, unsigned char *packet);
+  int map_pkt (int pkt_src, unsigned char *packet, int *vid);
 
   void add_vid (unsigned char *mac, uint32_t v);
 

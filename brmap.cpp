@@ -7,6 +7,7 @@
 
 #include<sys/socket.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "brmap.h"
 #include "logger.h"
@@ -39,7 +40,7 @@ brmap::print ()
      -1 - not found, drop
    */
 int
-brmap::map_pkt (int pkt_src, unsigned char *packet)
+brmap::map_pkt (int pkt_src, unsigned char *packet, int * vid)
 {
 
   uint32_t dest_i = 0;
@@ -63,12 +64,14 @@ brmap::map_pkt (int pkt_src, unsigned char *packet)
 	  // update source
 	  b.src_interface = pkt_src;
 	  bridge[src_mac] = b;
+	  // return vlan assignment
+	  *vid = b.vid;
 	}
     }
   else
     {
       Bridge_entry new_entry (pkt_src);
-      // Entry vid will be zero until we hear different
+      // Entry vid will be -1 (unassigned)  until we hear different
       bridge.emplace (src_mac, new_entry);
     }
 
@@ -118,6 +121,8 @@ struct thread_arg
 {
   brmap *brmap_ptr;
   int port;
+  int sockfd;
+  int readsocketfd;
 };
 
 void
@@ -131,38 +136,47 @@ error (const char *msg)
 void *
 socket_listener (void *arg)
 {
-  int sockfd, readsockfd;
   unsigned int readlen;
   struct vid_mess aVid_mess;
   struct sockaddr_in serv_addr, read_addr;
   int port = ((struct thread_arg *) arg)->port;
   brmap *brmap_ptr = ((struct thread_arg *) arg)->brmap_ptr;
-  sockfd = socket (VLAN_ASSIGN_CONN_TYPE, SOCK_STREAM, 0);
-  if (sockfd < 0)
+  brmap_ptr->sockfd = socket (VLAN_ASSIGN_CONN_TYPE, SOCK_STREAM, 0);
+  cout << " socket open " << port << endl;
+  
+  if (brmap_ptr->sockfd < 0)
     error ("ERROR opening update socket");
   bzero ((char *) &serv_addr, sizeof (serv_addr));
   serv_addr.sin_family = VLAN_ASSIGN_CONN_TYPE;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
   serv_addr.sin_port = htons (port);
-  if (bind (sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0)
+  if (bind (brmap_ptr->sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0)
     error ("ERROR on binding update socket");
   for (;;)
     {
-      listen (sockfd, 5);
+      listen (brmap_ptr->sockfd, 5);
       readlen = sizeof (read_addr);
-      readsockfd = accept (sockfd, (struct sockaddr *) &read_addr, &readlen);
-      if (readsockfd < 0)
+      brmap_ptr->readsockfd = accept (brmap_ptr->sockfd, (struct sockaddr *) &read_addr, &readlen);
+      if (brmap_ptr->readsockfd < 0)
 	error ("ERROR on accept bridge assignments");
       bzero ((void *) &aVid_mess, sizeof (struct vid_mess));
-      int n = read (readsockfd, &aVid_mess, sizeof (struct vid_mess));
+      int n = read (brmap_ptr->readsockfd, &aVid_mess, sizeof (struct vid_mess));
       MACADDR mac (aVid_mess.be_haddr);
       uint32_t vid = aVid_mess.be_vid;
       if (n < 0)
 	error ("ERROR reading from bridge socket");
       cout << "Received vid: " << mac << " VID: " << vid << endl;;
       brmap_ptr->add_vid (mac.mac, vid);
-      close (readsockfd);
+      close (brmap_ptr->readsockfd);
     }
+}
+
+// Define the function to be called when ctrl-c (SIGINT) is sent to process
+void signal_callback_handler(int signum) {
+   cout << "Caught signal " << signum << endl;
+   // Terminate program
+   //close(thismap->sockfd);
+   exit(signum);   
 }
 
 void
@@ -173,5 +187,6 @@ brmap::start_listener (int port)
   arg->port = port;
   arg->brmap_ptr = this;
   pthread_create (&fifo_thrd, NULL, socket_listener, (void *) arg);
-
+  signal(SIGINT, signal_callback_handler);  
+  
 }

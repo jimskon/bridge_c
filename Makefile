@@ -15,10 +15,10 @@ RM       = rm -f
 
 all: $(PROGRAMS)
 
-bridge: bridge.o brmap.o iface.o pdu/pdu.o pdu/pdu_eth.o pdu/pdu_ipv4.o pdu/pdu_udp.o pdu/pdu_tcp.o icmp4.o macaddr.o
+bridge: bridge.o brmap.o iface.o pdu/pdu.o pdu/pdu_eth.o pdu/pdu_ipv4.o pdu/pdu_udp.o pdu/pdu_tcp.o icmp4.o macaddr.o brmap.h
 	$(CXX) -o $@ $^ -lpthread
 
-testbr: testbr.o brmap.o
+testbr: testbr.o brmap.o brmap.h
 	$(CXX) -o $@ $^ -lpthread
 
 testsend: testsend.o brmap.o
