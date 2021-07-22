@@ -55,24 +55,26 @@ brmap::map_pkt (int pkt_src, unsigned char *packet, int * vid)
      drop if broadcast from this interface */
   if (bridge.find (src_mac) != bridge.end ())
     {
-      // check if changed
       Bridge_entry b = bridge.find (src_mac)->second;
 
       int src_i = b.src_interface;
+      // return vlan assignment for this destination
+      *vid=b.vid;
+
+      // check if changed
       if (src_i != pkt_src)
 	{
 	  // update source
 	  b.src_interface = pkt_src;
 	  bridge[src_mac] = b;
-	  // return vlan assignment
-	  *vid = b.vid;
 	}
     }
   else
     {
-      Bridge_entry new_entry (pkt_src);
+      Bridge_entry new_entry (pkt_src,-1);
       // Entry vid will be -1 (unassigned)  until we hear different
       bridge.emplace (src_mac, new_entry);
+      *vid=-1;
     }
 
   if (dest_mac.is_multicast () || dest_mac.is_broadcast ())
@@ -86,6 +88,7 @@ brmap::map_pkt (int pkt_src, unsigned char *packet, int * vid)
       if (bridge.find (dest_mac) != bridge.end ())
 	{
 	  dest_i = bridge[dest_mac].src_interface;
+	
 	}
       else
 	{
@@ -162,12 +165,13 @@ socket_listener (void *arg)
       bzero ((void *) &aVid_mess, sizeof (struct vid_mess));
       int n = read (brmap_ptr->readsockfd, &aVid_mess, sizeof (struct vid_mess));
       MACADDR mac (aVid_mess.be_haddr);
-      uint32_t vid = aVid_mess.be_vid;
+      int vid = aVid_mess.be_vid;
       if (n < 0)
 	error ("ERROR reading from bridge socket");
       cout << "Received vid: " << mac << " VID: " << vid << endl;;
       brmap_ptr->add_vid (mac.mac, vid);
       close (brmap_ptr->readsockfd);
+      brmap_ptr->print();
     }
 }
 

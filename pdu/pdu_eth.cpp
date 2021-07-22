@@ -1,5 +1,6 @@
 
 #include <cstdio>
+#include <iostream>
 #include <arpa/inet.h>
 
 #include "pdu_eth.h"
@@ -49,7 +50,7 @@ pdu_eth::filter( std::ostream& log )
 	return 1;
 }
 
-/*
+/* 
 std::ostream&
 pdu_eth::dump( std::ostream& os ) const
 {

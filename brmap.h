@@ -32,7 +32,7 @@ class Bridge_entry
 {
 public:
   int src_interface;
-  uint32_t vid;   // vid = -1 if unassigned
+  int vid;   // vid = -1 if unassigned
   MACADDR mac;    
   unsigned int ttl;
   Bridge_entry ()
@@ -40,7 +40,7 @@ public:
     src_interface = 0;
     vid = -1;
   }
-  Bridge_entry (uint32_t src, uint32_t v = -1)
+  Bridge_entry (uint32_t src, uint32_t v)
   {
     src_interface = src;
     vid = v;
