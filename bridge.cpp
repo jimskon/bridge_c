@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <bits/stdc++.h>
 
 #include <sys/select.h>
 
@@ -25,6 +26,17 @@ void printpacket(const char* msg, const unsigned char* p, size_t len) {
     cout << std::dec << endl;
 }
 
+/* Call with interface name to set correct interface state */
+void setInterfaceState(string interface) {
+        string command="ethtool -K ";
+        command += interface + " ";
+	command += "tx off rx off gso off tso off gro off lro off";
+	cout << command << endl;
+	// Run command;
+        const char *com = command.c_str();
+	std::system(com);
+	return;
+}
 
 int
 main( int argc, char *argv[] )
@@ -56,6 +68,9 @@ main( int argc, char *argv[] )
 	}
 	log.level( debug );
 
+	setInterfaceState(argv[1]);
+	setInterfaceState(argv[2]);
+	
 	assert( if1.bind( argv[1] ) == 0 );
 	assert( if2.bind( argv[2] ) == 0 );
 

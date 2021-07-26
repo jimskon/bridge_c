@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <cstring>
+#include <ctime>
 
 #include<sys/socket.h>
 #include <pthread.h>
@@ -14,8 +15,9 @@
 using namespace std;
 
 
-brmap::brmap (logger & log):_log (log)
-{;
+brmap::brmap (logger & log): br_ttl(DEF_BRIDGE_TIMEOUT),_log (log)
+{
+  br_last_scan=time(0);
 }
 
 void
@@ -27,11 +29,26 @@ brmap::print ()
   for (; it != bridge.end (); it++)
     {
       _log (0) << it->first;
-      _log (0) << " I: " << it->second.src_interface << " VID: " << it->
-	second.vid << endl;
+      _log (0) << " I: " << it->second.be_src_if << " VID: " << it->
+	second.be_vid << endl;
     }
 }
 
+/* scan map for entries older then br_lifetime. */
+void brmap::clean_map() {
+  map < MACADDR, Bridge_entry >::iterator it = bridge.begin ();
+  long int curtime = time(0);
+  for (; it != bridge.end (); it++)
+    {
+      if (it->second.be_last_used < curtime-br_ttl)
+	{
+	  it->second.be_src_if = -1;
+	}
+    }
+  br_last_scan = time(0);
+  print();
+
+}
   /* Transparent learning bridge map
      pkt_src    - source interface
      packet     - The packet to bridge
@@ -56,16 +73,17 @@ brmap::map_pkt (int pkt_src, unsigned char *packet, int * vid)
   if (bridge.find (src_mac) != bridge.end ())
     {
       Bridge_entry b = bridge.find (src_mac)->second;
+      b.be_last_used=time(0);
 
-      int src_i = b.src_interface;
+      int src_i = b.be_src_if;
       // return vlan assignment for this destination
-      *vid=b.vid;
+      *vid=b.be_vid;
 
       // check if changed
       if (src_i != pkt_src)
 	{
 	  // update source
-	  b.src_interface = pkt_src;
+	  b.be_src_if = pkt_src;
 	  bridge[src_mac] = b;
 	}
     }
@@ -87,8 +105,8 @@ brmap::map_pkt (int pkt_src, unsigned char *packet, int * vid)
       /* find where to send packet in the bridge */
       if (bridge.find (dest_mac) != bridge.end ())
 	{
-	  dest_i = bridge[dest_mac].src_interface;
-	
+	  dest_i = bridge[dest_mac].be_src_if;
+	  //bridge[dest_mac].be_last_used = time(0);
 	}
       else
 	{
@@ -96,6 +114,9 @@ brmap::map_pkt (int pkt_src, unsigned char *packet, int * vid)
 	  dest_i = -1;
 	}
     }
+  /* clear out old entries */
+  if (br_last_scan+br_ttl <= time(0)) clean_map();
+  
   return dest_i;
 }
 
@@ -108,7 +129,7 @@ brmap::add_vid (unsigned char *mac, uint32_t v)
   if (bridge.find (aMac) != bridge.end ())
     {
       Bridge_entry b = bridge.find (aMac)->second;
-      b.vid = v;
+      b.be_vid = v;
       bridge[aMac] = b;
     }
   else
