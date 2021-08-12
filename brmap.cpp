@@ -187,6 +187,10 @@ socket_listener (void *arg)
       int n = read (brmap_ptr->readsockfd, &aVid_mess, sizeof (struct vid_mess));
       MACADDR mac (aVid_mess.be_haddr);
       int vid = aVid_mess.be_vid;
+      /* If vid = 0, then it means native interface, so change to -1 in map */
+      if (vid == 0) {
+	vid = -1;
+      }
       if (n < 0)
 	error ("ERROR reading from bridge socket");
       cout << "Received vid: " << mac << " VID: " << vid << endl;;
