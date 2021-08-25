@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <map>
 #include <time.h>
@@ -5,6 +6,9 @@
 #include <unistd.h>
 #include <cstring>
 #include <ctime>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 #include<sys/socket.h>
 #include <pthread.h>
@@ -135,6 +139,7 @@ brmap::add_vid (unsigned char *mac, uint32_t v)
   else
     {
       // New entry.  -1 means no interface known yet
+      cout << "New Entry " << endl;
       Bridge_entry new_entry (-1, v);
       bridge.emplace (aMac, new_entry);
     }
@@ -160,43 +165,40 @@ error (const char *msg)
 void *
 socket_listener (void *arg)
 {
-  unsigned int readlen;
+  //unsigned int readlen;
   struct vid_mess aVid_mess;
-  struct sockaddr_in serv_addr, read_addr;
-  int port = ((struct thread_arg *) arg)->port;
+  int fifo_d;
+  char wlan_fifo[] = "/tmp/wlanbridgefifo";
+
+  mkfifo(wlan_fifo, 0666);
+
   brmap *brmap_ptr = ((struct thread_arg *) arg)->brmap_ptr;
-  brmap_ptr->sockfd = socket (VLAN_ASSIGN_CONN_TYPE, SOCK_STREAM, 0);
-  cout << " socket open " << port << endl;
   
-  if (brmap_ptr->sockfd < 0)
-    error ("ERROR opening update socket");
-  bzero ((char *) &serv_addr, sizeof (serv_addr));
-  serv_addr.sin_family = VLAN_ASSIGN_CONN_TYPE;
-  serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons (port);
-  if (bind (brmap_ptr->sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0)
-    error ("ERROR on binding update socket");
+  cout << " Listing to fifo" << endl;
+  
   for (;;)
     {
-      listen (brmap_ptr->sockfd, 5);
-      readlen = sizeof (read_addr);
-      brmap_ptr->readsockfd = accept (brmap_ptr->sockfd, (struct sockaddr *) &read_addr, &readlen);
-      if (brmap_ptr->readsockfd < 0)
-	error ("ERROR on accept bridge assignments");
-      bzero ((void *) &aVid_mess, sizeof (struct vid_mess));
-      int n = read (brmap_ptr->readsockfd, &aVid_mess, sizeof (struct vid_mess));
-      MACADDR mac (aVid_mess.be_haddr);
-      int vid = aVid_mess.be_vid;
-      /* If vid = 0, then it means native interface, so change to -1 in map */
-      if (vid == 0) {
-	vid = -1;
+      fifo_d = open(wlan_fifo,O_RDONLY);
+      if (fifo_d < 0) {
+	error ("ERROR opening update fifo");
+      } else {
+	bzero ((void *) &aVid_mess, sizeof (struct vid_mess));
+	int n = read (fifo_d, &aVid_mess, sizeof (struct vid_mess));
+	
+	// Only process correct sized messages
+	if (n == sizeof (struct vid_mess)) {
+	  MACADDR mac (aVid_mess.be_haddr);
+	  int vid = aVid_mess.be_vid;
+	  /* If vid = 0, then it means native interface, so change to -1 in map */
+	  if (vid == 0) {
+	    vid = -1;
+	  }
+	  cout << "Received vid: " << mac << " VID: " << vid << endl;;
+	  brmap_ptr->add_vid (mac.mac, vid);
+	  brmap_ptr->print();
+	}
       }
-      if (n < 0)
-	error ("ERROR reading from bridge socket");
-      cout << "Received vid: " << mac << " VID: " << vid << endl;;
-      brmap_ptr->add_vid (mac.mac, vid);
-      close (brmap_ptr->readsockfd);
-      brmap_ptr->print();
+      close(fifo_d);
     }
 }
 
